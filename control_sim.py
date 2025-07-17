@@ -5,98 +5,135 @@ from dash import Dash, html, dcc, Input, Output, State, MATCH
 import dash
 
 
+class PIDController:
+    """TODO"""
+
+    def __init__(self, y_target, Kp, Ki, Kd):
+        self.y_target = y_target
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.dt = None
+
+    def initialize(self, dt):
+        self.dt = dt
+        self.integral = 0.0
+        self.prev_error = 0.0
+
+    def step(self, output: float) -> float:
+        """TODO"""
+        error = self.y_target - output
+
+        derivative = (error - self.prev_error) / self.dt
+        self.prev_error = error
+
+        u = self.Kp * error + self.Ki * self.integral + self.Kd * derivative
+
+        # Update integral state
+        self.integral += error * self.dt
+
+        # Compute control input
+        return u
+
+
 class MassSpringSystem:
     """TODO"""
 
+    title = "Mass-Spring System"
+
+    system_inputs = {
+        "mass": {
+            "type": "number",
+            "value": 1.0,
+            "description": "Mass of the system (m)",
+        },
+        "spring_k": {
+            "type": "number",
+            "value": 10.0,
+            "description": "Spring constant (k)",
+        },
+        "damping_coefficient": {
+            "type": "number",
+            "value": 0.0,
+            "description": "Damping coefficient (c)",
+        },
+        "y_target": {
+            "type": "number",
+            "value": 1.0,
+            "description": "Target position (y_target)",
+        },
+        "Kp": {
+            "type": "number",
+            "value": 50.0,
+            "description": "Proportional gain (Kp)",
+        },
+        "Ki": {"type": "number", "value": 0.0, "description": "Integral gain (Ki)"},
+        "Kd": {"type": "number", "value": 5.0, "description": "Derivative gain (Kd)"},
+    }
+
+    simulation_inputs = {
+        "sim_time": {
+            "type": "number",
+            "value": 10.0,
+            "description": "Simulation time (s)",
+        },
+        "dt": {"type": "number", "value": 0.01, "description": "Time step (dt)"},
+    }
+
     @staticmethod
     def make_layout(sim_key):
-        print("making layout")
+        """TODO"""
+        # System input fields
+        input_fields = []
+        all_inputs = [
+            *MassSpringSystem.system_inputs.items(),
+            *MassSpringSystem.simulation_inputs.items(),
+        ]
+        for name, props in all_inputs:
+            input_fields.extend(
+                [
+                    html.Label(props["description"]),
+                    dcc.Input(
+                        id={"type": "sim-input", "sim": sim_key, "name": name},
+                        type=props["type"],
+                        value=props["value"],
+                    ),
+                ]
+            )
+
         return html.Div(
             [
-                html.Label("Mass (m):"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "mass"},
-                    type="number",
-                    value=1.0,
-                ),
-                html.Label("Spring Constant (k):"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "spring_k"},
-                    type="number",
-                    value=10.0,
-                ),
-                html.Label("Target Position (y_target):"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "y_target"},
-                    type="number",
-                    value=1.0,
-                ),
-                html.Label("PID: Kp:"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "Kp"},
-                    type="number",
-                    value=50.0,
-                ),
-                html.Label("Ki:"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "Ki"},
-                    type="number",
-                    value=0.0,
-                ),
-                html.Label("Kd:"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "Kd"},
-                    type="number",
-                    value=5.0,
-                ),
-                html.Label("Simulation Time (s):"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "sim_time"},
-                    type="number",
-                    value=10.0,
-                ),
-                html.Label("Time Step (Dt):"),
-                dcc.Input(
-                    id={"type": "sim-input", "sim": sim_key, "name": "Dt"},
-                    type="number",
-                    value=0.01,
-                ),
+                html.H1(MassSpringSystem.title),
+                *input_fields,
                 html.Button(
                     "Run Simulation", id={"type": "run-btn", "sim": sim_key}, n_clicks=0
                 ),
-                dcc.Graph(id={"type": "spring_animation", "sim": sim_key}),
-                dcc.Graph(id={"type": "position_plot", "sim": sim_key}),
-            ],
-            style={"columnCount": 2, "gap": "20px"},
+                html.Div(id={"type": "plots-container", "sim": sim_key}),
+            ]
         )
 
     @staticmethod
-    def register_callback(app):
-        print("Registering callbacks for MassSpringSystem")
+    def register_callbacks(app):
+        # Dynamically generate State inputs from class dictionaries
+        state_inputs = [
+            State({"type": "sim-input", "sim": MATCH, "name": name}, "value")
+            for name in list(MassSpringSystem.system_inputs.keys())
+            + list(MassSpringSystem.simulation_inputs.keys())
+        ]
 
         @app.callback(
-            Output({"type": "spring_animation", "sim": MATCH}, "figure"),
-            Output({"type": "position_plot", "sim": MATCH}, "figure"),
+            Output({"type": "plots-container", "sim": MATCH}, "children"),
             Input({"type": "run-btn", "sim": MATCH}, "n_clicks"),
-            State({"type": "sim-input", "sim": MATCH, "name": "mass"}, "value"),
-            State({"type": "sim-input", "sim": MATCH, "name": "spring_k"}, "value"),
-            State({"type": "sim-input", "sim": MATCH, "name": "y_target"}, "value"),
-            State({"type": "sim-input", "sim": MATCH, "name": "Kp"}, "value"),
-            State({"type": "sim-input", "sim": MATCH, "name": "Ki"}, "value"),
-            State({"type": "sim-input", "sim": MATCH, "name": "Kd"}, "value"),
-            State({"type": "sim-input", "sim": MATCH, "name": "sim_time"}, "value"),
-            State({"type": "sim-input", "sim": MATCH, "name": "Dt"}, "value"),
+            *state_inputs,
         )
-        def run_simulation(n_clicks, m, k, y_target, Kp, Ki, Kd, sim_time, dt):
+        def run_simulation(n_clicks, m, k, damping_coefficient, y_target, Kp, Ki, Kd, sim_time, dt):
             if n_clicks == 0:
-                return dash.no_update, dash.no_update
+                return dash.no_update
             system = MassSpringSystem(
-                m, k, 0.0, np.array([0.0, 0.0], dtype=float), y_target, Kp, Ki, Kd
+                m, k, damping_coefficient, np.array([0.0, 0.0], dtype=float), y_target, Kp, Ki, Kd
             )
             system.simulate(sim_time, dt)
-            animation = system.make_animation()
-            position_plot = system.make_plots()
-            return animation, position_plot
+            return system.make_plots()
 
     def __init__(
         self,
@@ -117,10 +154,7 @@ class MassSpringSystem:
         self.state = state
 
         # TODO abstract the controller logic
-        self.y_target = y_target
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
+        self.controller = PIDController(y_target=y_target, Kp=Kp, Ki=Ki, Kd=Kd)
 
     def f(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
         """
@@ -166,26 +200,28 @@ class MassSpringSystem:
         self.y = np.zeros(len(self.t))
         self.y[0] = self.g(self.x[0])
 
-        # Initialize the controller states
-        integral = 0.0
-        prev_error = 0.0
+        self.controller.initialize(dt)
 
         # Forward Euler integration TODO this can probably be abstracted or done in way that allows other integrators to be selected
         for i in range(0, len(self.t) - 1):
-            # Compute control input
-            error = self.y_target - self.y[i]
-            derivative = (error - prev_error) / dt
-
-            self.u[i] = self.Kp * error + self.Ki * integral + self.Kd * derivative
-            prev_error = error
-
-            integral = integral + error * dt
+            self.u[i] = self.controller.step(self.y[i])
 
             # Update state
             self.x[i + 1] = self.x[i] + self.f(self.x[i], self.u[i]) * dt
             self.y[i + 1] = self.g(self.x[i + 1])
 
         self.state = self.x[-1]  # Update the state to the last computed state
+
+    def make_plots(self):
+        """
+        Create a Div containing all plots for the mass-spring system.
+        """
+        figures = [
+            self.make_animation(),
+            self.position_plot(),
+            # Add more plot methods here if needed
+        ]
+        return html.Div([dcc.Graph(figure=fig) for fig in figures])
 
     def make_animation(self) -> go.Figure:
         """
@@ -309,10 +345,8 @@ class MassSpringSystem:
         )
         return fig
 
-    def make_plots(self) -> go.Figure:
-        """
-        Create plots for the mass-spring system
-        """
+    def position_plot(self) -> go.Figure:
+        """TODO"""
 
         # Determine axis limits based on max/min position
         y_min = np.min(np.min(self.x[:, 0])) - 0.5
@@ -356,7 +390,7 @@ def update_sim_layout(sim_key):
 
 
 for sim_class in SIM_OPTIONS.values():
-    sim_class.register_callback(app)
+    sim_class.register_callbacks(app)
 
 if __name__ == "__main__":
     app.run(debug=True)
