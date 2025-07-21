@@ -3,10 +3,66 @@ import scipy as sp
 import plotly.graph_objs as go
 from dash import Dash, html, dcc, Input, Output, State, MATCH
 import dash
+from dash.dependencies import ALL
+from typing import Type
 
 
 class PIDController:
-    """TODO"""
+    """PID Controller."""
+
+    title = "PID Controller"
+
+    controller_inputs = {
+        "Kp": {
+            "type": "number",
+            "value": 50.0,
+            "description": "Proportional gain (Kp)",
+        },
+        "Ki": {"type": "number", "value": 0.0, "description": "Integral gain (Ki)"},
+        "Kd": {"type": "number", "value": 5.0, "description": "Derivative gain (Kd)"},
+        "y_target": {
+            "type": "number",
+            "value": 1.0,
+            "description": "Target position (y_target)",
+        },
+    }
+
+    @classmethod
+    def make_layout(cls):
+        """TODO"""
+        return html.Div(
+            [
+                html.H2(f"{cls.title} Inputs"),
+                *[
+                    html.Div(
+                        [
+                            html.Label(props["description"]),
+                            dcc.Input(
+                                id={
+                                    "type": "controller-input",
+                                    "name": name,
+                                },
+                                type=props["type"],
+                                value=props["value"],
+                            ),
+                        ]
+                    )
+                    for name, props in cls.controller_inputs.items()
+                ],
+            ]
+        )
+    
+    # @classmethod
+    # def register_callbacks(cls, app):
+    #     """TODO"""
+    #     # Store controller inputs
+    #     @app.callback(
+    #         Output({"type": "controller-input-store", "controller": MATCH}, "data"),
+    #         [Input({"type": "controller-input", "controller": MATCH, "name": ALL}, "value")],
+    #         [State({"type": "controller-input", "controller": MATCH, "name": ALL}, "id")],
+    #     )
+    #     def store_controller_inputs(values, ids):
+    #         return {id_["name"]: val for val, id_ in zip(values, ids)}
 
     def __init__(self, y_target, Kp, Ki, Kd):
         self.y_target = y_target
@@ -41,13 +97,17 @@ class MassSpringSystem:
 
     title = "Mass-Spring System"
 
+    compatible_controllers = {
+        "PID Controller": PIDController,
+    }
+
     system_inputs = {
         "mass": {
             "type": "number",
             "value": 1.0,
             "description": "Mass of the system (m)",
         },
-        "spring_k": {
+        "spring_constant": {
             "type": "number",
             "value": 10.0,
             "description": "Spring constant (k)",
@@ -57,22 +117,10 @@ class MassSpringSystem:
             "value": 0.0,
             "description": "Damping coefficient (c)",
         },
-        "y_target": {
-            "type": "number",
-            "value": 1.0,
-            "description": "Target position (y_target)",
-        },
-        "Kp": {
-            "type": "number",
-            "value": 50.0,
-            "description": "Proportional gain (Kp)",
-        },
-        "Ki": {"type": "number", "value": 0.0, "description": "Integral gain (Ki)"},
-        "Kd": {"type": "number", "value": 5.0, "description": "Derivative gain (Kd)"},
     }
 
     simulation_inputs = {
-        "sim_time": {
+        "final_time": {
             "type": "number",
             "value": 10.0,
             "description": "Simulation time (s)",
@@ -80,81 +128,127 @@ class MassSpringSystem:
         "dt": {"type": "number", "value": 0.01, "description": "Time step (dt)"},
     }
 
-    @staticmethod
-    def make_layout(sim_key):
+    @classmethod
+    def make_layout(cls):
         """TODO"""
-        # System input fields
-        input_fields = []
-        all_inputs = [
-            *MassSpringSystem.system_inputs.items(),
-            *MassSpringSystem.simulation_inputs.items(),
-        ]
-        for name, props in all_inputs:
-            input_fields.extend(
-                [
-                    html.Label(props["description"]),
-                    dcc.Input(
-                        id={"type": "sim-input", "sim": sim_key, "name": name},
-                        type=props["type"],
-                        value=props["value"],
-                    ),
-                ]
-            )
+
+        def make_input_fields(inputs: dict) -> list:
+            """TODO"""
+            input_fields = []
+            for name, props in inputs.items():
+                input_fields.extend(
+                    [
+                        html.Label(props["description"]),
+                        dcc.Input(
+                            id={"type": "system-input", "name": name},
+                            type=props["type"],
+                            value=props["value"],
+                        ),
+                    ]
+                )
+            return input_fields
 
         return html.Div(
             [
-                html.H1(MassSpringSystem.title),
-                *input_fields,
-                html.Button(
-                    "Run Simulation", id={"type": "run-btn", "sim": sim_key}, n_clicks=0
-                ),
-                html.Div(id={"type": "plots-container", "sim": sim_key}),
+                html.H1(cls.title),
+                # System Inputs
+                html.H2("System Inputs"),
+                html.Div(make_input_fields(cls.system_inputs)),
+                # # Controller Options
+                # html.H2("Controller Options"),
+                # dcc.Dropdown(
+                #     id={"type": "controller-selection"},
+                #     options=[{"label": controller_key, "value": controller_key} for controller_key in cls.compatible_controllers],
+                #     value="PID Controller",
+                # ),
+                # # Controller Inputs
+                # html.Div(
+                #     id={"type": "controller-container"},
+                # ),
+                # Simulation Inputs
+                html.H2("Simulation Inputs"),
+                html.Div(make_input_fields(cls.simulation_inputs)),
+                # # Run Button
+                # html.Button(
+                #     "Run Simulation", id={"type": "run-btn"}, n_clicks=0
+                # ),
+                # # Plots Container
+                # html.Div(id={"type": "plots-container"}),
             ]
         )
 
-    @staticmethod
-    def register_callbacks(app):
-        # Dynamically generate State inputs from class dictionaries
-        state_inputs = [
-            State({"type": "sim-input", "sim": MATCH, "name": name}, "value")
-            for name in list(MassSpringSystem.system_inputs.keys())
-            + list(MassSpringSystem.simulation_inputs.keys())
-        ]
+    # @classmethod
+    # def register_callbacks(cls, app):
+        # Store system inputs
+        # @app.callback(
+        #     Output({"type": "system-input-store", "sim": MATCH}, "data"),
+        #     [Input({"type": "sim-input", "sim": MATCH, "name": ALL}, "value")],
+        #     [State({"type": "sim-input", "sim": MATCH, "name": ALL}, "id")],
+        # )
+        # def store_system_inputs(values, ids):
+        #     # TODO change the pattern matching of this
+        #     return {id_["name"]: val for val, id_ in zip(values, ids)}
 
-        @app.callback(
-            Output({"type": "plots-container", "sim": MATCH}, "children"),
-            Input({"type": "run-btn", "sim": MATCH}, "n_clicks"),
-            *state_inputs,
-        )
-        def run_simulation(n_clicks, m, k, damping_coefficient, y_target, Kp, Ki, Kd, sim_time, dt):
-            if n_clicks == 0:
-                return dash.no_update
-            system = MassSpringSystem(
-                m, k, damping_coefficient, np.array([0.0, 0.0], dtype=float), y_target, Kp, Ki, Kd
-            )
-            system.simulate(sim_time, dt)
-            return system.make_plots()
+        # Dynamically generate State inputs from class dictionaries
+        # state_inputs = [
+        #     State({"type": "sim-input", "sim": MATCH, "name": name}, "value")
+        #     for name in list(cls.system_inputs.keys())
+        #     + list(cls.simulation_inputs.keys())
+        # ]
+
+        # TODO now im going to need to seperate out the callbacks for running the simulation and controlling the controller and everything else
+        # @app.callback(
+        #     Output({"type": "controller-container", "sim": MATCH}, "children"),
+        #     Input({"type": "controller-selection", "sim": MATCH}, "value"),
+        # )
+        # def update_controller_container(controller_key):
+        #     controller_class = cls.compatible_controllers[controller_key]
+        #     return controller_class.make_layout(controller_key)
+
+        # @app.callback(
+        #     Output({"type": "plots-container", "sim": MATCH}, "children"),
+        #     Input({"type": "run-btn", "sim": MATCH}, "n_clicks"),
+        #     State({"type": "system-input-store", "sim": MATCH}, "data"),
+        #     State({"type": "controller-input-store", "controller": MATCH}, "data"),
+        # )
+        # def run_simulation(n_clicks, system_inputs, controller_inputs):
+        #     if n_clicks == 0:
+        #         return dash.no_update
+        #     # Example: unpack system and controller inputs
+        #     # You may need to adjust argument names to match your class constructors
+        #     system = MassSpringSystem(
+        #         mass=system_inputs["mass"],
+        #         spring_constant=system_inputs["spring_k"],
+        #         damping_coefficient=system_inputs["damping_coefficient"],
+        #         state=np.array([0.0, 0.0], dtype=float),
+        #         **controller_inputs
+        #     )
+        #     system.simulate(system_inputs["final_time"], system_inputs["dt"])
+        #     return system.make_plots()
 
     def __init__(
         self,
         mass: float,
         spring_constant: float,
         damping_coefficient: float,
-        state: np.ndarray,
-        y_target: float,
+        # Simulation inputs
+        final_time: float,
+        dt: float,
+        # state: np.ndarray = np.array([0.0, 0.0], dtype=float), # TODO this needs to be changed
         # going to want to abstract the controller logic later
-        Kp: float,
-        Ki: float,
-        Kd: float,
+        controller: PIDController
     ):
         """TODO state is a 2D vector [position, velocity]"""
         self.mass = mass
         self.spring_constant = spring_constant
         self.damping_coefficient = damping_coefficient
-        self.state = state
+        self.state = np.array([0.0, 0.0], dtype=float)
+
+        self.final_time = final_time
+        self.dt = dt
 
         # TODO abstract the controller logic
-        self.controller = PIDController(y_target=y_target, Kp=Kp, Ki=Ki, Kd=Kd)
+        self.controller = controller
 
     def f(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
         """
@@ -186,28 +280,28 @@ class MassSpringSystem:
     def C(self) -> np.ndarray:
         return np.array([[1, 0]])
 
-    def simulate(self, tf: float, dt: float) -> None:
+    def simulate(self) -> None:
         """
         TODO
         Simulate the system for one time step given control input u
         Update the state in place
         """
         # Initialize the states of the system
-        self.t = np.arange(0, tf, dt)
+        self.t = np.arange(0, self.final_time, self.dt)
         self.x = np.zeros((len(self.t), len(self.state)))
         self.x[0] = self.state
         self.u = np.zeros((len(self.t), 1))
         self.y = np.zeros(len(self.t))
         self.y[0] = self.g(self.x[0])
 
-        self.controller.initialize(dt)
+        self.controller.initialize(self.dt)
 
         # Forward Euler integration TODO this can probably be abstracted or done in way that allows other integrators to be selected
         for i in range(0, len(self.t) - 1):
             self.u[i] = self.controller.step(self.y[i])
 
             # Update state
-            self.x[i + 1] = self.x[i] + self.f(self.x[i], self.u[i]) * dt
+            self.x[i + 1] = self.x[i] + self.f(self.x[i], self.u[i]) * self.dt
             self.y[i + 1] = self.g(self.x[i + 1])
 
         self.state = self.x[-1]  # Update the state to the last computed state
@@ -364,33 +458,99 @@ class MassSpringSystem:
         return position_plot
 
 
-SIM_OPTIONS = {
+SIM_OPTIONS: dict[str, type[MassSpringSystem]] = {
     "Mass-Spring System": MassSpringSystem,
+}
+
+CONTROLLER_OPTIONS: dict[str, type[PIDController]] = {
+    "PID Controller": PIDController,
 }
 
 app = Dash(__name__)
 
-app.layout = html.Div(
-    [
-        html.H1("PID-Controlled Mass-Spring System"),
-        dcc.Dropdown(
-            id="sim-selector",
-            options=[{"label": k, "value": k} for k in SIM_OPTIONS],
-            value="Mass-Spring System",
-        ),
-        html.Div(id="sim-container"),
-    ]
+app.layout = html.Div([
+    dcc.Dropdown(
+        id="system-selector",
+        options=[{"label": k, "value": k} for k in SIM_OPTIONS],
+        value=list(SIM_OPTIONS.keys())[0],
+    ),
+    dcc.Dropdown(
+        id="controller-selector",
+        options=[{"label": k, "value": k} for k in CONTROLLER_OPTIONS],
+        value=list(CONTROLLER_OPTIONS.keys())[0],
+    ),
+    html.Div(id="system-inputs-container"),
+    html.Div(id="controller-inputs-container"),
+    html.Button("Run Simulation", id="run-btn"),
+    html.Div(id="plots-container"),
+    dcc.Store(id="system-input-store"),
+    dcc.Store(id="controller-input-store"),
+])
+
+# Dynamically generate system input fields
+@app.callback(
+    Output("system-inputs-container", "children"),
+    Input("system-selector", "value"),
 )
+def render_system_inputs(system_key):
+    system_class = SIM_OPTIONS[system_key]
+    return system_class.make_layout()
 
+# Dynamically generate controller input fields TODO move this to the system class
+@app.callback(
+    Output("controller-inputs-container", "children"),
+    Input("controller-selector", "value"),
+)
+def render_controller_inputs(controller_key):
+    controller_class: type[PIDController] = CONTROLLER_OPTIONS[controller_key]
+    return controller_class.make_layout()
 
-@app.callback(Output("sim-container", "children"), Input("sim-selector", "value"))
-def update_sim_layout(sim_key):
-    sim_class = SIM_OPTIONS[sim_key]
-    return sim_class.make_layout(sim_key)
+# Store system inputs
+@app.callback(
+    Output("system-input-store", "data"),
+    Input({"type": "system-input", "name": ALL}, "value"),
+    State({"type": "system-input", "name": ALL}, "id"),
+)
+def store_system_inputs(values, ids):
+    print("Storing system inputs:", values, ids)
+    return {id_["name"]: val for val, id_ in zip(values, ids)}
 
+# Store controller inputs
+@app.callback(
+    Output("controller-input-store", "data"),
+    Input({"type": "controller-input", "name": ALL}, "value"),
+    State({"type": "controller-input", "name": ALL}, "id"),
+)
+def store_controller_inputs(values, ids):
+    print("Storing controller inputs:", values, ids)
+    return {id_["name"]: val for val, id_ in zip(values, ids)}
 
-for sim_class in SIM_OPTIONS.values():
-    sim_class.register_callbacks(app)
+# Run simulation
+@app.callback(
+    Output("plots-container", "children"),
+    Input("run-btn", "n_clicks"),
+    State("system-selector", "value"),
+    State("controller-selector", "value"),
+    State("system-input-store", "data"),
+    State("controller-input-store", "data"),
+)
+def run_simulation(n_clicks, system_key, controller_key, system_inputs, controller_inputs):
+    if not n_clicks:
+        return dash.no_update
+    print("Running simulation with inputs:", system_inputs, controller_inputs)
+    system_class = SIM_OPTIONS[system_key]
+    controller_class = CONTROLLER_OPTIONS[controller_key]
+    # Unpack and pass arguments as needed
+    controller = controller_class(**controller_inputs)
+    system = system_class(**system_inputs, controller=controller)
+    system.simulate()
+    return system.make_plots()
+
+# for sim_class in SIM_OPTIONS.values():
+#     sim_class.register_callbacks(app)
+
+# for controller_class in CONTROLLER_OPTIONS.values():
+#     controller_class.register_callbacks(app)
 
 if __name__ == "__main__":
     app.run(debug=True)
