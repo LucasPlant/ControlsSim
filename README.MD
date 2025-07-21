@@ -1,5 +1,7 @@
 TODO: 
-More generalization and break out into its own class
-Docstrings
 generalization of plotting
-root locus plot
+root locus plotting
+state initialization
+state feedback controller
+
+compatible controllers function if needed
