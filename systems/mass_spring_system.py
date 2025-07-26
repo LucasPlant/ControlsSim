@@ -39,6 +39,19 @@ class MassSpringSystem(BaseLinearSystem):
         "dt": {"type": "number", "value": 0.01, "description": "Time step (dt)"},
     }
 
+    state_info = [
+        {
+            "name": "Position",
+            "value": 0.0,
+            "description": "Initial position of the mass (m)",
+        },
+        {
+            "name": "Velocity",
+            "value": 0.0,
+            "description": "Initial velocity of the mass (m/s)",
+        },
+    ]
+
     def __init__(
         self,
         mass: float,
@@ -47,6 +60,8 @@ class MassSpringSystem(BaseLinearSystem):
         final_time: float,
         dt: float,
         controller: BaseController,
+        state_0: float,  # Initial position
+        state_1: float,  # Initial velocity
     ):
         """
         Initialize the mass-spring system with parameters and a controller.
@@ -63,7 +78,7 @@ class MassSpringSystem(BaseLinearSystem):
         self.mass = mass
         self.spring_constant = spring_constant
         self.damping_coefficient = damping_coefficient
-        self.state = np.array([0.0, 0.0], dtype=float) # TODO make this an input
+        self.state = np.array([state_0, state_1], dtype=float)
 
     def A(self) -> np.ndarray:
         return np.array(

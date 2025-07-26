@@ -7,11 +7,15 @@ from controllers import BaseController
 class BaseSystem:
     """A base class to define the basic interface for systems."""
 
+    # TODO add some documentation to what these fields are for
+
     title = None
 
     system_inputs = {}
 
     simulation_inputs = {}
+
+    state_info = []  # list with dict containing name, value, description
 
     @classmethod
     def make_layout(cls):
@@ -20,6 +24,7 @@ class BaseSystem:
         def make_input_fields(inputs: dict) -> list:
             """Makes the gui input fields for the system."""
             input_fields = []
+            # Parameter inputs
             for name, props in inputs.items():
                 input_fields.extend(
                     [
@@ -33,6 +38,23 @@ class BaseSystem:
                 )
             return input_fields
 
+        def make_state_inputs(state_info: list[dict[str, str]]) -> list:
+            input_fields = []
+            # State Initialization inputs
+            for idx, props in enumerate(state_info):
+                input_fields.extend(
+                    [
+                        html.Label(props["name"] + ": " + props["description"]),
+                        dcc.Input(
+                            id={"type": "system-input", "name": f"state_{idx}"},
+                            type="number",
+                            value=props["value"],
+                        ),
+                    ]
+                )
+
+            return input_fields
+
         return html.Div(
             [
                 html.H1(cls.title),
@@ -41,12 +63,12 @@ class BaseSystem:
                 html.Div(make_input_fields(cls.system_inputs)),
                 html.H2("Simulation Inputs"),
                 html.Div(make_input_fields(cls.simulation_inputs)),
+                html.H2("State Initialization"),
+                html.Div(make_state_inputs(cls.state_info)),
             ]
         )
 
-    def __init__(
-        self, controller: BaseController, dt: float = 0.01, final_time: float = 10.0
-    ):
+    def __init__(self, controller: BaseController, dt: float, final_time: float):
         """
         Initialize the system with a controller and simulation parameters.
 
@@ -83,19 +105,19 @@ class BaseSystem:
             The output of the system.
         """
         raise NotImplementedError("This method should be implemented in subclasses")
-    
+
     def A(self) -> np.ndarray:
         """
         The linearized state matrix A of the system.
         """
         raise NotImplementedError("Subclasses must implement the A method.")
-    
+
     def B(self) -> np.ndarray:
         """
         The linearized input matrix B of the system.
         """
         raise NotImplementedError("Subclasses must implement the B method.")
-    
+
     def C(self) -> np.ndarray:
         """
         The linearized output matrix C of the system.
@@ -115,12 +137,12 @@ class BaseSystem:
         self.y = np.zeros(len(self.t))
         self.y[0] = self.g(self.x[0])
 
-        self.controller.initialize(self.dt)
+        self.controller.initialize(self.A(), self.B(), self.C(), self.dt, self.t)
 
         # Forward Euler integration
         # TODO other integration methods can be implemented later
         for i in range(0, len(self.t) - 1):
-            self.u[i] = self.controller.step(self.y[i])
+            self.u[i] = self.controller.step(self.y[i], i)
 
             # Update state
             self.x[i + 1] = self.x[i] + self.f(self.x[i], self.u[i]) * self.dt
@@ -136,9 +158,10 @@ class BaseSystem:
             self.make_animation(),
             self.output_plot(),
             *self.state_plots(),
+            *self.controller.make_state_plots(),
         ]
         return html.Div([dcc.Graph(figure=fig) for fig in figures])
-    
+
     def make_analysis_plots(self):
         """
         Create a Div containing all analysis plots for the mass-spring system.
@@ -192,7 +215,7 @@ class BaseSystem:
             )
             state_plots.append(state_plot)
         return state_plots
-    
+
     def mode_plot(self) -> go.Figure:
         """
         Return a plot of the system's modes on the complex plane.
@@ -204,15 +227,15 @@ class BaseSystem:
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
-            x=real_vals,
-            y=imag_vals,
-            mode="markers",
-            marker=dict(
-                size=12,
-                color="blue",
-                symbol="x"  # Use 'x' marker to match controls standards
-            ),
-            name="Eigenvalues",
+                x=real_vals,
+                y=imag_vals,
+                mode="markers",
+                marker=dict(
+                    size=12,
+                    color="blue",
+                    symbol="x",  # Use 'x' marker to match controls standards
+                ),
+                name="Eigenvalues",
             )
         )
         fig.update_layout(
@@ -224,8 +247,16 @@ class BaseSystem:
             height=400,
         )
         # Add some padding to the axis limits for better visualization
-        pad_x = (real_vals.max() - real_vals.min()) * 0.1 if real_vals.max() != real_vals.min() else 1
-        pad_y = (imag_vals.max() - imag_vals.min()) * 0.1 if imag_vals.max() != imag_vals.min() else 1
+        pad_x = (
+            (real_vals.max() - real_vals.min()) * 0.1
+            if real_vals.max() != real_vals.min()
+            else 1
+        )
+        pad_y = (
+            (imag_vals.max() - imag_vals.min()) * 0.1
+            if imag_vals.max() != imag_vals.min()
+            else 1
+        )
         fig.update_xaxes(range=[real_vals.min() - pad_x, real_vals.max() + pad_x])
         fig.update_yaxes(range=[imag_vals.min() - pad_y, imag_vals.max() + pad_y])
         return fig

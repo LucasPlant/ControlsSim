@@ -35,35 +35,65 @@ class BaseController:
             ]
         )
 
-    def initialize(self, dt: float):
+    def __init__(self):
+        """Base initialization method"""
+        self.t = np.ndarray([])  # Placeholder for time array
+        self.state = np.ndarray([])  # Placeholder for internal state
+        self.u = np.ndarray([])  # Placeholder for control input
+
+    def initialize(
+        self, A: np.ndarray, B: np.ndarray, C: np.ndarray, dt: float, t: np.ndarray
+    ):
         """Initialize the controller and set a time step.
         This method should be called before the first step.
 
         Args:
             dt: The time step for the controller.
         """
-        raise NotImplementedError("This method should be implemented in subclasses")
+        self.dt = dt
+        self.t = t
+        self.u = np.zeros(len(t))  # Initialize control input array
 
-    def step(self, y: float) -> float:
+    def step(self, y: float, index: int) -> float:
         """Calculate the control action based on the current output.
         Will also update the internal state of the controller.
 
         Args:
             output: The current output of the system (y).
+            index: The current index in the time array.
 
         Returns:
             The control action (u) to be applied to the system.
         """
-        raise NotImplementedError("This method should be implemented in subclasses")
+        return 0.0
 
-    def make_analysis_plots(self, A: np.ndarray, B: np.ndarray, C:np.ndarray) -> list[go.Figure]:
+    def make_state_plots(self) -> list[go.Figure]:
+        """Will plot th internal state variables of the controller over the simulation domain."""
+        state_plots = []
+        # state = self.get_state_by_time()
+        for i in range(self.state.shape[1]):
+            state_plot = go.Figure()
+            state_plot.add_trace(
+                go.Scatter(
+                    x=self.t, y=self.state[:, i], mode="lines", name=f"State {i+1}"
+                )
+            )
+            state_plot.update_layout(
+                title=f"Controller state {i+1} Over Time",
+                xaxis_title="Time (s)",
+                yaxis_title=f"State {i+1}",
+            )
+            state_plots.append(state_plot)
+        return state_plots
+
+    def make_analysis_plots(
+        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
+    ) -> list[go.Figure]:
         """
         Return a list of plot objects to be displayed when the inputs are changed for analysis.
         """
-        return [
-            self.mode_plot(A, B, C)
-            ]
-    
+        return [self.mode_plot(A, B, C)]
+
     def mode_plot(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> go.Figure:
         """
         Return a plot of the controlled systems modes on the complex plane.
@@ -87,12 +117,17 @@ class BaseController:
             width=600,
             height=400,
         )
-        fig.update_xaxes(range=[np.min(np.real(eigenvalues)), np.max(np.real(eigenvalues))])
-        fig.update_yaxes(range=[np.min(np.imag(eigenvalues)), np.max(np.imag(eigenvalues))])
+        fig.update_xaxes(
+            range=[np.min(np.real(eigenvalues)), np.max(np.real(eigenvalues))]
+        )
+        fig.update_yaxes(
+            range=[np.min(np.imag(eigenvalues)), np.max(np.imag(eigenvalues))]
+        )
         return fig
 
-
-    def calculate_controlled_eigenvalues(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> np.ndarray:
+    def calculate_controlled_eigenvalues(
+        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
+    ) -> np.ndarray:
         """
         Calculate the eigenvalues of the controlled system.
         """

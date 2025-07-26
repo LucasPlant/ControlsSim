@@ -28,18 +28,23 @@ class PIDController(BaseController):
     }
 
     def __init__(self, y_target, Kp, Ki, Kd):
+        super().__init__()
         self.y_target = y_target
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
         self.dt = None
 
-    def initialize(self, dt):
-        self.dt = dt
+    def initialize(self, A, B, C, dt: float, t: np.ndarray):
+        super().initialize(A, B, C, dt, t)
+
         self.integral = 0.0
         self.prev_error = 0.0
 
-    def step(self, y: float) -> float:
+        # Initialize the state logging
+        self.state = np.zeros((len(t), 2))  # Placeholder for state,
+
+    def step(self, y: float, index: int) -> float:
         error = self.y_target - y
 
         derivative = (error - self.prev_error) / self.dt
@@ -50,19 +55,28 @@ class PIDController(BaseController):
         # Update integral state
         self.integral += error * self.dt
 
+        # Log the state
+        self.state[index, 0] = self.integral
+        self.state[index, 1] = derivative
+        self.u[index] = u
+
         # Compute control input
         return u
-    
-    def make_analysis_plots(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> list[go.Figure]:
+
+    def make_analysis_plots(
+        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
+    ) -> list[go.Figure]:
         return []
         return [
             *super().make_analysis_plots(A, B, C),
             self.root_locus_plot(A, B, C),
-            ]
-    
-    def calculate_controlled_eigenvalues(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> np.ndarray:
+        ]
+
+    def calculate_controlled_eigenvalues(
+        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
+    ) -> np.ndarray:
         return np.linalg.eigvals(A - B @ C)
-    
+
     def root_locus_plot(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> go.Figure:
         """
         TODO made by AI so check this
@@ -71,7 +85,9 @@ class PIDController(BaseController):
         # Placeholder for actual root locus computation
         # This should compute the poles of the closed-loop system
         # and plot them in the complex plane.
-        
+
         fig = go.Figure()
-        fig.update_layout(title="Root Locus Plot", xaxis_title="Real", yaxis_title="Imaginary")
+        fig.update_layout(
+            title="Root Locus Plot", xaxis_title="Real", yaxis_title="Imaginary"
+        )
         return fig

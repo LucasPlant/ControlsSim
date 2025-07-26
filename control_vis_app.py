@@ -42,6 +42,7 @@ app.layout = html.Div(
     ]
 )
 
+
 # Dynamically generate system input fields
 @app.callback(
     Output("system-inputs-container", "children"),
@@ -116,7 +117,7 @@ def run_simulation(
     State("controller-selector", "value"),
 )
 def update_analysis_plots(system_inputs, controller_inputs, system_key, controller_key):
-    if not system_inputs or not controller_inputs:
+    if not system_inputs:
         return dash.no_update
 
     system_class = SIM_OPTIONS[system_key]

@@ -1,3 +1,5 @@
+from numpy import ndarray
+from plotly.graph_objs._figure import Figure
 from .base_controller import BaseController
 
 
@@ -8,16 +10,8 @@ class NoopController(BaseController):
 
     controller_inputs = {}
 
-    def initialize(self, dt: float):
-        """Initialize the no-op controller."""
-        pass
+    def make_state_plots(self) -> list[Figure]:
+        return []
 
-    def step(self, y: float) -> float:
-        """Return zero control action."""
-        return 0.0
-    
-    def make_analysis_plots(self, A, B, C):
-        """
-        Return an empty list of plots since this controller does not perform any control.
-        """
+    def make_analysis_plots(self, A: ndarray, B: ndarray, C: ndarray) -> list[Figure]:
         return []

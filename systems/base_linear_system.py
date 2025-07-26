@@ -15,4 +15,3 @@ class BaseLinearSystem(BaseSystem):
 
     def g(self, x: np.ndarray) -> np.ndarray:
         return np.dot(self.C(), x)
-
