@@ -27,6 +27,19 @@ class PIDController(BaseController):
         },
     }
 
+    state_info = [
+        {
+            "name": "Integrator",
+            "value": 0.0,
+            "description": "Integral of the error over time",
+        },
+        {
+            "name": "Derivative",
+            "value": 0.0,
+            "description": "Derivative of the error (approximation)",
+        },
+    ]
+
     def __init__(self, y_target, Kp, Ki, Kd):
         super().__init__()
         self.y_target = y_target
@@ -48,6 +61,8 @@ class PIDController(BaseController):
         error = self.y_target - y
 
         derivative = (error - self.prev_error) / self.dt
+        if index == 0:
+            derivative = 0.0
         self.prev_error = error
 
         u = self.Kp * error + self.Ki * self.integral + self.Kd * derivative

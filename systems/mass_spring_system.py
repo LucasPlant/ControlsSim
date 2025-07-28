@@ -92,7 +92,7 @@ class MassSpringSystem(BaseLinearSystem):
         )
 
     def B(self) -> np.ndarray:
-        return np.array([[0], [1 / self.mass]])
+        return np.array([[0, 1 / self.mass]])
 
     def C(self) -> np.ndarray:
         return np.array([[1, 0]])

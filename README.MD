@@ -7,8 +7,6 @@ Plots:
 
         Transfer Functions / Bode Plots
 
-        Controller plots and logging of internal states
-
 UI:
     State initialization / persistence
 

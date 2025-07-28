@@ -10,6 +10,8 @@ class BaseController:
 
     controller_inputs = {}
 
+    state_info = []  # list with dict containing name, value, description
+
     @classmethod
     def make_layout(cls):
         """Generate the layout for the controller's input fields based on the cls.controller_inputs variable."""
@@ -78,8 +80,10 @@ class BaseController:
                     x=self.t, y=self.state[:, i], mode="lines", name=f"State {i+1}"
                 )
             )
+
+            name = self.state_info[i]["name"]
             state_plot.update_layout(
-                title=f"Controller state {i+1} Over Time",
+                title=f"Controller state {i+1}: {name} Over Time",
                 xaxis_title="Time (s)",
                 yaxis_title=f"State {i+1}",
             )

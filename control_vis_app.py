@@ -20,22 +20,37 @@ app = Dash("Control Visualization App")
 app.layout = html.Div(
     [
         html.H1("Control Visualization App"),
-        html.H2("Select a System to Simulate"),
-        dcc.Dropdown(
-            id="system-selector",
-            options=[{"label": k, "value": k} for k in SIM_OPTIONS],
-            value=list(SIM_OPTIONS.keys())[0],
+        html.Div(
+            [
+                # Left column: options and simulation controls
+                html.Div(
+                    [
+                        html.H2("Select a System to Simulate"),
+                        dcc.Dropdown(
+                            id="system-selector",
+                            options=[{"label": k, "value": k} for k in SIM_OPTIONS],
+                            value=list(SIM_OPTIONS.keys())[0],
+                        ),
+                        html.H2("Select a Controller"),
+                        dcc.Dropdown(
+                            id="controller-selector",
+                            options=[{"label": k, "value": k} for k in CONTROLLER_OPTIONS],
+                            value=list(CONTROLLER_OPTIONS.keys())[0],
+                        ),
+                        html.Div(id="system-inputs-container"),
+                        html.Div(id="controller-inputs-container"),
+                        html.Button("Run Simulation", id="run-btn"),
+                    ],
+                    style={"flex": "1", "minWidth": "350px", "marginRight": "40px"},
+                ),
+                # Right column: analysis plots
+                html.Div(
+                    id="analysis-plots-container",
+                    style={"flex": "1", "minWidth": "350px"},
+                ),
+            ],
+            style={"display": "flex", "flexDirection": "row", "alignItems": "flex-start"},
         ),
-        html.H2("Select a Controller"),
-        dcc.Dropdown(
-            id="controller-selector",
-            options=[{"label": k, "value": k} for k in CONTROLLER_OPTIONS],
-            value=list(CONTROLLER_OPTIONS.keys())[0],
-        ),
-        html.Div(id="system-inputs-container"),
-        html.Div(id="controller-inputs-container"),
-        html.Button("Run Simulation", id="run-btn"),
-        html.Div(id="analysis-plots-container"),
         html.Div(id="simulation-plots-container"),
         dcc.Store(id="system-input-store"),
         dcc.Store(id="controller-input-store"),

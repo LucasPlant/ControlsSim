@@ -133,7 +133,7 @@ class BaseSystem:
         self.t = np.arange(0, self.final_time, self.dt)
         self.x = np.zeros((len(self.t), len(self.state)))
         self.x[0] = self.state
-        self.u = np.zeros((len(self.t), 1))
+        self.u = np.zeros((len(self.t))) # TODO need to fix this for MIMO systems
         self.y = np.zeros(len(self.t))
         self.y[0] = self.g(self.x[0])
 
@@ -157,6 +157,7 @@ class BaseSystem:
         figures = [
             self.make_animation(),
             self.output_plot(),
+            self.control_output_plot(),
             *self.state_plots(),
             *self.controller.make_state_plots(),
         ]
@@ -197,6 +198,20 @@ class BaseSystem:
             yaxis=dict(range=[y_min, y_max]),
         )
         return output_plot
+    
+    def control_output_plot(self) -> go.Figure:
+        """
+        Plots the control output (u) over time.
+        """
+        # If u is 2D (e.g., shape (N, 1)), flatten for plotting
+        control_output_plot = go.Figure()
+        control_output_plot.add_trace(go.Scatter(x=self.t, y=self.u, mode="lines"))
+        control_output_plot.update_layout(
+            title="Control Output (u) Over Time",
+            xaxis_title="Time (s)",
+            yaxis_title="Control Output (u)",
+        )
+        return control_output_plot
 
     def state_plots(self) -> list[go.Figure]:
         """
@@ -208,8 +223,9 @@ class BaseSystem:
             state_plot.add_trace(
                 go.Scatter(x=self.t, y=self.x[:, i], mode="lines", name=f"State {i+1}")
             )
+            state_name = self.state_info[i]["name"]
             state_plot.update_layout(
-                title=f"State {i+1} Over Time",  # TODO: eventually make a mapping to something meaningful
+                title=f"State {i+1}: {state_name} Over Time",  # TODO: eventually make a mapping to something meaningful
                 xaxis_title="Time (s)",
                 yaxis_title=f"State {i+1}",
             )
