@@ -70,25 +70,26 @@ class BaseController:
         return 0.0
 
     def make_state_plots(self) -> list[go.Figure]:
-        """Will plot th internal state variables of the controller over the simulation domain."""
-        state_plots = []
-        # state = self.get_state_by_time()
-        for i in range(self.state.shape[1]):
-            state_plot = go.Figure()
+        """Plot all internal state variables of the controller on a single figure."""
+        state_plot = go.Figure()
+        num_states = self.state.shape[1]
+        for i in range(num_states):
+            name = self.state_info[i]["name"]
             state_plot.add_trace(
                 go.Scatter(
-                    x=self.t, y=self.state[:, i], mode="lines", name=f"State {i+1}"
+                    x=self.t,
+                    y=self.state[:, i],
+                    mode="lines",
+                    name=name,
                 )
             )
-
-            name = self.state_info[i]["name"]
-            state_plot.update_layout(
-                title=f"Controller state {i+1}: {name} Over Time",
-                xaxis_title="Time (s)",
-                yaxis_title=f"State {i+1}",
-            )
-            state_plots.append(state_plot)
-        return state_plots
+        state_plot.update_layout(
+            title="Controller States Over Time",
+            xaxis_title="Time (s)",
+            yaxis_title="State Value",
+            legend_title="States",
+        )
+        return [state_plot]
 
     def make_analysis_plots(
         self, A: np.ndarray, B: np.ndarray, C: np.ndarray

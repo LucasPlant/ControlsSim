@@ -215,22 +215,27 @@ class BaseSystem:
 
     def state_plots(self) -> list[go.Figure]:
         """
-        Return a list of state plots for the system.
+        Return a list containing a single plot with all system states.
         """
-        state_plots = []
-        for i in range(self.x.shape[1]):
-            state_plot = go.Figure()
-            state_plot.add_trace(
-                go.Scatter(x=self.t, y=self.x[:, i], mode="lines", name=f"State {i+1}")
-            )
+        state_plot = go.Figure()
+        num_states = self.x.shape[1]
+        for i in range(num_states):
             state_name = self.state_info[i]["name"]
-            state_plot.update_layout(
-                title=f"State {i+1}: {state_name} Over Time",  # TODO: eventually make a mapping to something meaningful
-                xaxis_title="Time (s)",
-                yaxis_title=f"State {i+1}",
+            state_plot.add_trace(
+                go.Scatter(
+                    x=self.t,
+                    y=self.x[:, i],
+                    mode="lines",
+                    name=state_name,
+                )
             )
-            state_plots.append(state_plot)
-        return state_plots
+        state_plot.update_layout(
+            title="System States Over Time",
+            xaxis_title="Time (s)",
+            yaxis_title="State Value",
+            legend_title="States",
+        )
+        return [state_plot]
 
     def mode_plot(self) -> go.Figure:
         """
