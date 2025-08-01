@@ -52,6 +52,10 @@ class MassSpringSystem(BaseLinearSystem):
         },
     ]
 
+    output_info = ["Position (y)"]
+
+    input_info = ["Force (u)"]
+
     def __init__(
         self,
         mass: float,
@@ -78,7 +82,7 @@ class MassSpringSystem(BaseLinearSystem):
         self.mass = mass
         self.spring_constant = spring_constant
         self.damping_coefficient = damping_coefficient
-        self.state = np.array([state_0, state_1], dtype=float)
+        self.initial_state = np.array([state_0, state_1], dtype=float)
 
     def A(self) -> np.ndarray:
         return np.array(
@@ -92,7 +96,7 @@ class MassSpringSystem(BaseLinearSystem):
         )
 
     def B(self) -> np.ndarray:
-        return np.array([[0, 1 / self.mass]])
+        return np.array([[0], [1 / self.mass]])
 
     def C(self) -> np.ndarray:
         return np.array([[1, 0]])

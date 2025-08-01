@@ -2,7 +2,12 @@ from dash import Dash, html, dcc, Input, Output, State
 import dash
 from dash.dependencies import ALL
 
-from controllers import BaseController, NoopController, PIDController
+from controllers import (
+    BaseController,
+    NoopController,
+    PIDController,
+    StateFeedbackController,
+)
 from systems import BaseSystem, MassSpringSystem
 
 
@@ -13,6 +18,7 @@ SIM_OPTIONS: dict[str, type[BaseSystem]] = {
 CONTROLLER_OPTIONS: dict[str, type[BaseController]] = {
     "No Controller": NoopController,
     "PID Controller": PIDController,
+    "State Feedback": StateFeedbackController,
 }
 
 app = Dash("Control Visualization App")
@@ -34,7 +40,9 @@ app.layout = html.Div(
                         html.H2("Select a Controller"),
                         dcc.Dropdown(
                             id="controller-selector",
-                            options=[{"label": k, "value": k} for k in CONTROLLER_OPTIONS],
+                            options=[
+                                {"label": k, "value": k} for k in CONTROLLER_OPTIONS
+                            ],
                             value=list(CONTROLLER_OPTIONS.keys())[0],
                         ),
                         html.Div(id="system-inputs-container"),
@@ -49,7 +57,11 @@ app.layout = html.Div(
                     style={"flex": "1", "minWidth": "350px"},
                 ),
             ],
-            style={"display": "flex", "flexDirection": "row", "alignItems": "flex-start"},
+            style={
+                "display": "flex",
+                "flexDirection": "row",
+                "alignItems": "flex-start",
+            },
         ),
         html.Div(id="simulation-plots-container"),
         dcc.Store(id="system-input-store"),
@@ -142,7 +154,7 @@ def update_analysis_plots(system_inputs, controller_inputs, system_key, controll
     system = system_class(**system_inputs, controller=controller)
 
     # Assumes make_analysis_plots() returns Dash components
-    return system.make_analysis_plots()
+    return system.make_analysis_fields()
 
 
 if __name__ == "__main__":

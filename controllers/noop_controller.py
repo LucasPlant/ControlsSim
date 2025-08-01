@@ -1,5 +1,5 @@
 from numpy import ndarray
-from plotly.graph_objs._figure import Figure
+import plotly.graph_objs as go
 from .base_controller import BaseController
 
 
@@ -10,8 +10,8 @@ class NoopController(BaseController):
 
     controller_inputs = {}
 
-    def make_state_plots(self) -> list[Figure]:
+    def make_state_plots(self) -> list[go.Figure]:
         return []
 
-    def make_analysis_plots(self, A: ndarray, B: ndarray, C: ndarray) -> list[Figure]:
+    def make_analysis_plots(self, A, B, C) -> list[go.Figure]:
         return []

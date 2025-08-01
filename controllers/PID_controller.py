@@ -48,16 +48,16 @@ class PIDController(BaseController):
         self.Kd = Kd
         self.dt = None
 
-    def initialize(self, A, B, C, dt: float, t: np.ndarray):
-        super().initialize(A, B, C, dt, t)
+    def initialize(self, A, B, C, dt, t, state_info):
+        super().initialize(A, B, C, dt, t, state_info)
 
         self.integral = 0.0
         self.prev_error = 0.0
 
         # Initialize the state logging
-        self.state = np.zeros((len(t), 2))  # Placeholder for state,
+        self.state = np.zeros((len(self.t), 2))  # Placeholder for state
 
-    def step(self, y: float, index: int) -> float:
+    def step(self, y, index):
         error = self.y_target - y
 
         derivative = (error - self.prev_error) / self.dt
@@ -76,33 +76,19 @@ class PIDController(BaseController):
         self.u[index] = u
 
         # Compute control input
-        return u
+        return np.array([u])
 
-    def make_analysis_plots(
-        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
-    ) -> list[go.Figure]:
+    def make_analysis_plots(self, A, B, C) -> list:
         return []
+        # TODO make these plots work
         return [
             *super().make_analysis_plots(A, B, C),
             self.root_locus_plot(A, B, C),
         ]
 
-    def calculate_controlled_eigenvalues(
-        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
-    ) -> np.ndarray:
-        return np.linalg.eigvals(A - B @ C)
+    def calculate_controlled_eigenvalues(self, A, B, C) -> np.ndarray:
+        return np.linalg.eigvals(A - B @ C)  # TODO this is inaccurate
 
-    def root_locus_plot(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> go.Figure:
-        """
-        TODO made by AI so check this
-        Create a root locus plot for the PID controller.
-        """
-        # Placeholder for actual root locus computation
-        # This should compute the poles of the closed-loop system
-        # and plot them in the complex plane.
-
-        fig = go.Figure()
-        fig.update_layout(
-            title="Root Locus Plot", xaxis_title="Real", yaxis_title="Imaginary"
-        )
-        return fig
+    def root_locus_plot(self) -> go.Figure:
+        # TODO
+        raise NotImplementedError

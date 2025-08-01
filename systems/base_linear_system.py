@@ -11,7 +11,7 @@ class BaseLinearSystem(BaseSystem):
         Defines x dot given x, u
         Change later if we want non time variant
         """
-        return np.dot(self.A(), x) + np.dot(self.B(), u)
+        return (self.A() @ x) + (self.B() @ u)
 
     def g(self, x: np.ndarray) -> np.ndarray:
-        return np.dot(self.C(), x)
+        return self.C() @ x

@@ -1,6 +1,7 @@
 from dash import html, dcc
 import plotly.graph_objs as go
 import numpy as np
+from plot_utils import mode_plot, multivar_plot
 
 
 class BaseController:
@@ -29,6 +30,7 @@ class BaseController:
                                 },
                                 type=props["type"],
                                 value=props["value"],
+                                debounce=True,
                             ),
                         ]
                     )
@@ -38,102 +40,114 @@ class BaseController:
         )
 
     def __init__(self):
-        """Base initialization method"""
+        """
+        Base initialization method inititializes time and u
+        TODO: is u really needed to be stored here
+        """
         self.t = np.ndarray([])  # Placeholder for time array
         self.state = np.ndarray([])  # Placeholder for internal state
         self.u = np.ndarray([])  # Placeholder for control input
 
     def initialize(
-        self, A: np.ndarray, B: np.ndarray, C: np.ndarray, dt: float, t: np.ndarray
+        self,
+        A: np.ndarray,
+        B: np.ndarray,
+        C: np.ndarray,
+        dt: float,
+        t: np.ndarray,
+        state_info: list[dict[str, str]],
     ):
-        """Initialize the controller and set a time step.
+        """
+        Initialize the controller and set a time step.
         This method should be called before the first step.
+        initializes dt, t, and u
 
         Args:
-            dt: The time step for the controller.
+            A: the state space A matrix
+            B: the state space B matrix
+            C: the state space C matrix
+            dt: the controller timestep
+            t: the time array
         """
         self.dt = dt
         self.t = t
-        self.u = np.zeros(len(t))  # Initialize control input array
+        self.u = np.zeros(
+            len(self.t)
+        )  # Initialize control input array TODO is this needed
 
-    def step(self, y: float, index: int) -> float:
-        """Calculate the control action based on the current output.
-        Will also update the internal state of the controller.
-
+    def step(self, y: np.ndarray, index: int) -> np.ndarray:
+        """
+        Calculate the control output and step the internal state of the system
+    
         Args:
-            output: The current output of the system (y).
+            y: The current output of the system.
             index: The current index in the time array.
 
         Returns:
             The control action (u) to be applied to the system.
         """
-        return 0.0
+        return np.array([0.0])
 
     def make_state_plots(self) -> list[go.Figure]:
-        """Plot all internal state variables of the controller on a single figure."""
-        state_plot = go.Figure()
-        num_states = self.state.shape[1]
-        for i in range(num_states):
-            name = self.state_info[i]["name"]
-            state_plot.add_trace(
-                go.Scatter(
-                    x=self.t,
-                    y=self.state[:, i],
-                    mode="lines",
-                    name=name,
-                )
+        """
+        Plot all internal state variables of the controller on a single figure.
+        
+        Returns:
+        The plot of the controller states
+        """
+        return [
+            multivar_plot(
+                self.state,
+                self.t,
+                [state["name"] for state in self.state_info],
+                "Controller states over time",
             )
-        state_plot.update_layout(
-            title="Controller States Over Time",
-            xaxis_title="Time (s)",
-            yaxis_title="State Value",
-            legend_title="States",
-        )
-        return [state_plot]
+        ]
 
     def make_analysis_plots(
         self, A: np.ndarray, B: np.ndarray, C: np.ndarray
-    ) -> list[go.Figure]:
+    ) -> list:
         """
-        Return a list of plot objects to be displayed when the inputs are changed for analysis.
+        Define all of the analysis plots associated with the controller
+        
+        Args:
+        A: the state space A matrix
+        B the state space B matrix
+        C: the state space C matrix
+
+
+        Returns:
+        a list of figures to include
         """
         return [self.mode_plot(A, B, C)]
 
-    def mode_plot(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> go.Figure:
+    def mode_plot(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> dcc.Graph:
         """
-        Return a plot of the controlled systems modes on the complex plane.
+        Plots the modes of the system on the complex plane.
+
+        Args:
+        A: the state space A matrix
+        B the state space B matrix
+        C: the state space C matrix
+
+        Returns:
+        the figure containing the plot
         """
         eigenvalues = self.calculate_controlled_eigenvalues(A, B, C)
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=np.real(eigenvalues),
-                y=np.imag(eigenvalues),
-                mode="markers",
-                marker=dict(size=10, color="blue"),
-                name="Eigenvalues",
-            )
-        )
-        fig.update_layout(
-            title="Controlled System Eigenvalues",
-            xaxis_title="Real Part",
-            yaxis_title="Imaginary Part",
-            showlegend=True,
-            width=600,
-            height=400,
-        )
-        fig.update_xaxes(
-            range=[np.min(np.real(eigenvalues)), np.max(np.real(eigenvalues))]
-        )
-        fig.update_yaxes(
-            range=[np.min(np.imag(eigenvalues)), np.max(np.imag(eigenvalues))]
-        )
-        return fig
+        return dcc.Graph(figure=mode_plot(eigenvalues, "Controlled System Modes"))
 
     def calculate_controlled_eigenvalues(
         self, A: np.ndarray, B: np.ndarray, C: np.ndarray
     ) -> np.ndarray:
         """
         Calculate the eigenvalues of the controlled system.
+
+        Args:
+        A: linearized A matrix
+        B: linearized B matrix
+        C: linearized C matrix
+
+        Returns:
+        an ndarray with the complex modes of the controlled system
         """
         raise NotImplementedError("This method should be implemented in subclasses")
