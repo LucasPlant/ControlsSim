@@ -11,11 +11,13 @@ Plots:
         Kalman decompositions
 
 UI:
-    State initialization / persistence
+    Controller state initialization
+    Persistence
 
 Controllers:
     State Feedback
         Integral control
+            mimo integral controlle
     MIMO controllers
         MIMO FSFB using pole placement
         Mode shaping?

@@ -2,3 +2,4 @@ from .base_controller import BaseController
 from .PID_controller import PIDController
 from .noop_controller import NoopController
 from .state_feedback_controller import StateFeedbackController
+from .state_feedback_w_integral_controller import StateFeedbackIntegralController

@@ -46,7 +46,6 @@ class PIDController(BaseController):
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
-        self.dt = None
 
     def initialize(self, A, B, C, dt, t, state_info):
         super().initialize(A, B, C, dt, t, state_info)

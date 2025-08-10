@@ -7,6 +7,7 @@ from controllers import (
     NoopController,
     PIDController,
     StateFeedbackController,
+    StateFeedbackIntegralController,
 )
 from systems import BaseSystem, MassSpringSystem
 
@@ -19,6 +20,7 @@ CONTROLLER_OPTIONS: dict[str, type[BaseController]] = {
     "No Controller": NoopController,
     "PID Controller": PIDController,
     "State Feedback": StateFeedbackController,
+    "State Feedback Integral": StateFeedbackIntegralController
 }
 
 app = Dash("Control Visualization App")

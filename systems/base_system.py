@@ -33,7 +33,7 @@ class BaseSystem:
         def make_input_fields(inputs: dict) -> list:
             """
             Makes the gui input fields for the system.
-            
+
             Args:
             inputs: a dict containing the systems inputs
 

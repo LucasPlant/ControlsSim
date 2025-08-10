@@ -78,7 +78,7 @@ class BaseController:
     def step(self, y: np.ndarray, index: int) -> np.ndarray:
         """
         Calculate the control output and step the internal state of the system
-    
+
         Args:
             y: The current output of the system.
             index: The current index in the time array.
@@ -91,7 +91,7 @@ class BaseController:
     def make_state_plots(self) -> list[go.Figure]:
         """
         Plot all internal state variables of the controller on a single figure.
-        
+
         Returns:
         The plot of the controller states
         """
@@ -104,12 +104,10 @@ class BaseController:
             )
         ]
 
-    def make_analysis_plots(
-        self, A: np.ndarray, B: np.ndarray, C: np.ndarray
-    ) -> list:
+    def make_analysis_plots(self, A: np.ndarray, B: np.ndarray, C: np.ndarray) -> list:
         """
         Define all of the analysis plots associated with the controller
-        
+
         Args:
         A: the state space A matrix
         B the state space B matrix

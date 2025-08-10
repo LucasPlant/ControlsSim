@@ -10,7 +10,7 @@ def multivar_plot(
     """
     A utility to easily plot multiple vars on the same axes good for state plots
     TODO Look into replacing this with dataframe based plotting for ease
-    
+
     Args:
     vars: numpy array containing the vars over time to plot (time, var)
     t: the numpy array of timestamps
