@@ -1,63 +1,109 @@
-TODO:
+# ControlSim
 
-Determine an MVP and once it is presentable then deploy to web
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Plots:
-    More analysis plots
-        Root Locus
-        Controlled poles and zeros for PID
+A web-based dynamic systems and control simulation platform that enables users to visualize and interact with various control systems in real-time. Built with Python using the Dash framework and Plotly for interactive visualizations.
 
-        Transfer Functions / Bode Plots *
+## Features
 
-        Controllable subspaces
-        Kalman decompositions
+- Interactive system simulation in your web browser
+- Real-time visualization of system dynamics
+- Multiple controller implementations (PID, State Feedback, etc.)
+- Various dynamic system models
+- Built on top of modern Python frameworks (Dash, Plotly)
 
-Systems:
-    2 mass spring *
+## Getting Started
 
-    2D / 3D mass with force
-        add in orientation / attitude
-        COSMOS
-        Thruster allocation
+### Prerequisites
 
-    Inverted Pendulum / Cart pole *
-    Cruise control
-    Double / Triple inverted pendulum Cart pole
-    
-    Orbital bodies
-        may require removing support for controllers for now (noop controller)
+- Python 3.x
+- Git
 
-UI:
-    Controller state initialization
-    Persistence
-    Some organization / beatification
+### Installation
 
-Controllers:
-    MIMO controllers *
-        Checking all array dimensions to be compatible
-        MIMO FSFB using pole placement
-        Mode shaping?
-    Optimal Controller *
-        LQR
-            Finite time horizon
-            Infinite time horizon *
-        Kalman Filter
-    Feed Forward / Trajectory Planner
-        Plant inversion
-        Polynomial trajectory planning
-        Optimal trajectories
-        Command shaping
+1. Clone the repository:
+   ```bash
+   git clone git@github.com:LucasPlant/ControlsSim.git
+   cd ControlsSim
+   ```
 
-Stochasticity
-    Noisy sensors
-    Noisy effectors
-    Disturbance rejection
+2. Install dependencies:
+   ```bash
+   # TODO: Add requirements.txt or Docker setup
+   ```
 
-Propagator improvements
-    Runge Kutta 4th order *
-    Controller update period *
+3. Run the application:
+   ```bash
+   python control_vis_app.py
+   ```
 
-unit testing if this ever becomes multi person 
-    leaving this out for now as its just me and i dont have the time
+4. Open your web browser and navigate to the localhost address shown in the terminal.
 
-Try to keep up with inline docs and typehints to futureproff
+## Contributing
+
+Contributions are welcome! If you'd like to contribute please reach out to me
+
+## Roadmap
+
+### High Priority
+- [ ] Define and complete MVP features
+- [ ] Deploy web application
+- [ ] Create requirements.txt or Docker container
+
+### Nice to have
+- [ ] Unit testing
+
+### Analysis Features
+- [ ] Root Locus plots
+- [ ] Other classical control plots (Nyquist)
+- [ ] Poles and zeros visualization for PID
+- [ ] Transfer Functions and Bode Plots
+- [ ] Controllable subspaces analysis
+- [ ] Kalman decompositions
+
+### System Models
+- [ ] Cart pole system
+- [ ] Two-mass spring system
+- [ ] 2D/3D mass with force
+  - [ ] Orientation and attitude
+  - [ ] COSMOS
+  - [ ] Thruster allocation
+- [ ] Inverted Pendulum / Cart pole
+- [ ] Cruise control simulation
+- [ ] Multiple pendulum systems
+- [ ] Orbital body simulation
+
+### User Interface
+- [ ] Controller state initialization
+- [ ] State persistence
+- [ ] UI organization and beautification
+
+### Control Systems
+- [ ] MIMO Controllers
+  - [ ] Array dimension compatibility
+  - [ ] MIMO FSFB using pole placement
+  - [ ] Mode shaping
+- [ ] Optimal Controllers
+  - [ ] LQR (Finite/Infinite time horizon)
+  - [ ] Kalman Filter
+- [ ] Feed Forward / Trajectory Planning
+  - [ ] Plant inversion
+  - [ ] Polynomial trajectory planning
+  - [ ] Optimal trajectories
+  - [ ] Command shaping
+
+### Advanced Features
+- [ ] Stochastic Elements
+  - [ ] Sensor noise simulation
+  - [ ] Actuator noise
+  - [ ] Disturbance rejection
+- [ ] Propagator improvements
+  - [ ] Controller update period
+
+## Development Guidelines
+- Maintain comprehensive inline documentation
+- Use type hints for better code maintainability
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

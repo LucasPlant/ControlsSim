@@ -8,6 +8,7 @@ class PIDController(BaseController):
     PID Controller.
     This controller implements a Proportional-Integral-Derivative (PID) control algorithm.
     The derivative portion is an approximation using a first order difference.
+    TODO: Allow MIMO PID control
     """
 
     title = "PID Controller"
