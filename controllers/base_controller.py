@@ -61,6 +61,7 @@ class BaseController:
         Initialize the controller and set a time step.
         This method should be called before the first step.
         initializes dt, t, and u
+        Validates matrix dimensions and initializes controller parameters.
 
         Args:
             A: the state space A matrix
@@ -68,12 +69,25 @@ class BaseController:
             C: the state space C matrix
             dt: the controller timestep
             t: the time array
+            state_info: list of dictionaries containing state information
         """
+        # Validate matrix dimensions
+        # TODO do really want to keep this here i feel like the validation maybe should be elsewhere
+        state_dim = A.shape[0]
+        if A.shape[1] != state_dim:
+            raise ValueError(f"A matrix must be square, got shape {A.shape}")
+        if B.shape[0] != state_dim:
+            raise ValueError(f"B matrix rows must match state dimension, got shape {B.shape}")
+        if C.shape[1] != state_dim:
+            raise ValueError(f"C matrix columns must match state dimension, got shape {C.shape}")
+            
+        input_dim = B.shape[1]
+        output_dim = C.shape[0]
+        
         self.dt = dt
         self.t = t
-        self.u = np.zeros(
-            len(self.t)
-        )  # Initialize control input array TODO is this needed
+        # Initialize control input array with proper dimensions
+        self.u = np.zeros((len(self.t), input_dim))
 
     def step(self, y: np.ndarray, index: int) -> np.ndarray:
         """

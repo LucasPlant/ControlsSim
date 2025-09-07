@@ -52,11 +52,22 @@ class StateFeedbackController(BaseController):
         """
         degree = A.shape[0]
 
-        # Calculate gains using ackermans formula
+        # Calculate gains using ackermans formula - for MIMO systems
+        # TODO may need to use place poles instead for ackermann formula
         K = control.acker(A, B, [lambda_c] * degree)
-        K = K.reshape(1, -1)
+        # K = place_poles(A, B, [lambda_c] * degree).gain_matrix
+        
+        # For MIMO: K should be shaped as (input_dim, state_dim)
+        if K.ndim == 1:
+            K = K.reshape(B.shape[1], -1)
+            
+        # Calculate observer gains
         L = control.acker(A.T, C.T, [lambda_e] * degree).T
-        L = L.reshape(-1, 1)
+        # L = place_poles(A.T, C, lambda_e, [lambda_e] * degree).gain_matrix.T
+        
+        # For MIMO: L should be shaped as (state_dim, output_dim)
+        if L.ndim == 1:
+            L = L.reshape(-1, C.shape[0])
 
         return K, L
 

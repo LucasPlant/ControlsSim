@@ -161,16 +161,26 @@ class BaseSystem:
         self.t = np.arange(0, self.final_time, self.dt)
         self.x = np.zeros((len(self.t), len(self.initial_state)))
         self.x[0, :] = self.initial_state
-        self.u = np.zeros((len(self.t), 1))
-        self.y = np.zeros((len(self.t), 1))
+        
+        # Get input/output dimensions from B and C matrices
+        # TODO instead have the system creator make these for the potential for nonlinear control ect
+        input_dim = self.B().shape[1]
+        output_dim = self.C().shape[0]
+        
+        # Initialize u and y with proper dimensions for MIMO
+        self.u = np.zeros((len(self.t), input_dim))
+        self.y = np.zeros((len(self.t), output_dim))
         self.y[0, :] = self.g(self.x[0, :])
 
         self.controller.initialize(
             self.A(), self.B(), self.C(), self.dt, self.t, self.state_info
         )
 
+        self.runge_kutta_4th_order()
+
+    def forward_euler(self):
+        """TODO"""
         # Forward Euler integration
-        # TODO other integration methods can be implemented later
         for i in range(0, len(self.t) - 1):
             self.u[i, :] = self.controller.step(self.y[i, :], i)
 
@@ -180,9 +190,25 @@ class BaseSystem:
             )
             self.y[i + 1, :] = self.g(self.x[i + 1, :])
 
-        self.initial_state = self.x[
-            -1, :
-        ]  # Update the state to the last computed state
+    def runge_kutta_4th_order(self):
+        """TODO"""
+        # Runge-Kutta 4th Order integration
+        for i in range(0, len(self.t) - 1):
+            # Calculate the control input for this time step
+            # the u is not involved in the runge kutta steps as we are dealing with a digital controller
+            # TODO Eventually we want the controller to support other update rates slower than the simulation rate
+            self.u[i, :] = self.controller.step(self.y[i, :], i)
+
+            k1 = self.f(self.x[i, :], self.u[i, :])
+            k2 = self.f(self.x[i, :] + 0.5 * self.dt * k1, self.u[i, :])
+            k3 = self.f(self.x[i, :] + 0.5 * self.dt * k2, self.u[i, :])
+            k4 = self.f(self.x[i, :] + self.dt * k3, self.u[i, :])
+
+            # Update state
+            self.x[i + 1, :] = (
+                self.x[i, :] + (self.dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+            )
+            self.y[i + 1, :] = self.g(self.x[i + 1, :])
 
     def make_simulation_plots(self):
         """
