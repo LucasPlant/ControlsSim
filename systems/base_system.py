@@ -161,12 +161,12 @@ class BaseSystem:
         self.t = np.arange(0, self.final_time, self.dt)
         self.x = np.zeros((len(self.t), len(self.initial_state)))
         self.x[0, :] = self.initial_state
-        
+
         # Get input/output dimensions from B and C matrices
         # TODO instead have the system creator make these for the potential for nonlinear control ect
         input_dim = self.B().shape[1]
         output_dim = self.C().shape[0]
-        
+
         # Initialize u and y with proper dimensions for MIMO
         self.u = np.zeros((len(self.t), input_dim))
         self.y = np.zeros((len(self.t), output_dim))
@@ -205,8 +205,8 @@ class BaseSystem:
             k4 = self.f(self.x[i, :] + self.dt * k3, self.u[i, :])
 
             # Update state
-            self.x[i + 1, :] = (
-                self.x[i, :] + (self.dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+            self.x[i + 1, :] = self.x[i, :] + (self.dt / 6) * (
+                k1 + 2 * k2 + 2 * k3 + k4
             )
             self.y[i + 1, :] = self.g(self.x[i + 1, :])
 

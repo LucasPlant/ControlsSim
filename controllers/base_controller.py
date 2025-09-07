@@ -77,13 +77,17 @@ class BaseController:
         if A.shape[1] != state_dim:
             raise ValueError(f"A matrix must be square, got shape {A.shape}")
         if B.shape[0] != state_dim:
-            raise ValueError(f"B matrix rows must match state dimension, got shape {B.shape}")
+            raise ValueError(
+                f"B matrix rows must match state dimension, got shape {B.shape}"
+            )
         if C.shape[1] != state_dim:
-            raise ValueError(f"C matrix columns must match state dimension, got shape {C.shape}")
-            
+            raise ValueError(
+                f"C matrix columns must match state dimension, got shape {C.shape}"
+            )
+
         input_dim = B.shape[1]
         output_dim = C.shape[0]
-        
+
         self.dt = dt
         self.t = t
         # Initialize control input array with proper dimensions

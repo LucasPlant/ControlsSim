@@ -132,7 +132,7 @@ class StateFeedbackIntegralController(BaseController):
         self.sigma[index + 1, :] = self.sigma[index, :] + self.dt * (y - self.y_target)
 
         return u
-    
+
     # TODO These should be made static and possibly moved out of here
     def make_analysis_plots(self, A, B, C) -> list:
         return [
