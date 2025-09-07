@@ -11,6 +11,7 @@ from controllers import (
 )
 from systems import BaseSystem, MassSpringSystem
 
+LOCAL = False
 
 SIM_OPTIONS: dict[str, type[BaseSystem]] = {
     "Mass-Spring System": MassSpringSystem,
@@ -160,4 +161,7 @@ def update_analysis_plots(system_inputs, controller_inputs, system_key, controll
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    if LOCAL:
+        app.run(debug=True)
+    else:
+        app.run(debug=False, host="0.0.0.0", port="7860")

@@ -1,3 +1,15 @@
+---
+title: Control Systems Visualization
+emoji: 🦿
+colorFrom: blue
+colorTo: red
+sdk: docker
+sdk_version: 3.0.0
+app_file: control_vis_app.py
+pinned: true
+---
+
+
 # ControlSim
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
