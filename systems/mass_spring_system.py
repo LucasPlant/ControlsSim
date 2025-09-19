@@ -8,7 +8,6 @@ from controllers import (
     NoopController,
     PIDController,
     StateFeedbackController,
-    StateFeedbackIntegralController,
 )
 from .base_linear_system import BaseLinearSystem
 
@@ -23,7 +22,6 @@ class MassSpringSystem(BaseLinearSystem):
         "No Controller": NoopController,
         "PID Controller": PIDController,
         "State Feedback": StateFeedbackController,
-        "State Feedback Integral": StateFeedbackIntegralController,
     }
 
     system_inputs = {
@@ -80,7 +78,7 @@ class MassSpringSystem(BaseLinearSystem):
         controller_type: str,
         state_0: float,  # Initial position
         state_1: float,  # Initial velocity
-        controller_inputs: dict
+        controller_inputs: dict,
     ):
         """
         Initialize the mass-spring system with parameters and controller.

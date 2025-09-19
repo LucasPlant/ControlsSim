@@ -65,23 +65,23 @@ def render_system_inputs(system_key):
     Output({"type": "controller-inputs", "system": ALL}, "children"),
     Input({"type": "input", "source": "system", "name": "controller_type"}, "value"),
     State("system-selector", "value"),
-    State("system-input-store", "data")
+    State("system-input-store", "data"),
 )
 def render_controller_inputs(controller_type, system_key, inputs):
     if not controller_type or not system_key:
         return [html.Div()]
-    
+
     system_class = SIM_OPTIONS[system_key]
     controller_class = system_class.allowed_controllers.get(controller_type)
-    
+
     if not controller_class:
         return [html.Div()]
-    
+
     # Get existing controller inputs if they exist
     controller_inputs = {}
     if inputs and "controller" in inputs:
         controller_inputs = inputs["controller"]
-    
+
     return [controller_class.make_layout(controller_inputs)]
 
 
@@ -95,17 +95,14 @@ def store_inputs(values, ids):
     # Separate system and controller inputs
     system_inputs = {}
     controller_inputs = {}
-    
+
     for val, id_ in zip(values, ids):
         if id_["source"] == "system":
             system_inputs[id_["name"]] = val
         elif id_["source"] == "controller":
             controller_inputs[id_["name"]] = val
-    
-    return {
-        "system": system_inputs,
-        "controller": controller_inputs
-    }
+
+    return {"system": system_inputs, "controller": controller_inputs}
 
 
 # Run simulation
@@ -120,7 +117,7 @@ def run_simulation(n_clicks, system_key, inputs):
         return dash.no_update
 
     system_class = SIM_OPTIONS[system_key]
-    
+
     # Combine system and controller inputs
     system_inputs = inputs.get("system", {})
     controller_inputs = inputs.get("controller", {})
@@ -141,7 +138,7 @@ def update_analysis_plots(inputs, system_key):
         return dash.no_update
 
     system_class = SIM_OPTIONS[system_key]
-    
+
     # Combine system and controller inputs
 
     system_inputs = inputs.get("system", {})

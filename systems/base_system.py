@@ -26,7 +26,9 @@ class BaseSystem:
     allowed_controllers: dict[str, type[BaseController]] = {}
 
     @classmethod
-    def make_layout(cls, system_inputs: dict | None = None, controller_inputs: dict | None = None) -> html.Div:
+    def make_layout(
+        cls, system_inputs: dict | None = None, controller_inputs: dict | None = None
+    ) -> html.Div:
         """Generate the layout for the system's input fields based on the cls.system_inputs variable.
 
         Returns:
@@ -76,7 +78,11 @@ class BaseSystem:
                     [
                         html.Label(props["name"] + ": " + props["description"]),
                         dcc.Input(
-                            id={"type": "input", "source": "system", "name": f"state_{idx}"},
+                            id={
+                                "type": "input",
+                                "source": "system",
+                                "name": f"state_{idx}",
+                            },
                             type="number",
                             value=props["value"],
                             debounce=True,
@@ -100,8 +106,14 @@ class BaseSystem:
                 html.H2("Select Controller"),
                 dcc.Dropdown(
                     id={"type": "input", "source": "system", "name": "controller_type"},
-                    options=[{"label": k, "value": k} for k in cls.allowed_controllers.keys()],
-                    value=list(cls.allowed_controllers.keys())[0] if cls.allowed_controllers else None,
+                    options=[
+                        {"label": k, "value": k} for k in cls.allowed_controllers.keys()
+                    ],
+                    value=(
+                        list(cls.allowed_controllers.keys())[0]
+                        if cls.allowed_controllers
+                        else None
+                    ),
                     clearable=False,
                 ),
                 # Container for controller-specific inputs - this will be populated by callback
@@ -109,7 +121,13 @@ class BaseSystem:
             ]
         )
 
-    def __init__(self, dt: float, final_time: float, controller_type: str, controller_inputs: dict):
+    def __init__(
+        self,
+        dt: float,
+        final_time: float,
+        controller_type: str,
+        controller_inputs: dict,
+    ):
         """
         Initialize the system with a controller and simulation parameters.
 
@@ -123,7 +141,7 @@ class BaseSystem:
         self.final_time = final_time
         # Initial state of the system; should be overridden by subclasses
         self.initial_state = np.array([])
-        
+
         # Initialize controller
         controller_class = self.allowed_controllers[controller_type]
         self.controller = controller_class(**controller_inputs)
