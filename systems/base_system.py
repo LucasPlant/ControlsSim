@@ -27,7 +27,7 @@ class BaseSystem:
 
     @classmethod
     def make_layout(
-        cls, system_inputs: dict | None = None, controller_inputs: dict | None = None
+        cls, system_inputs: dict, controller_inputs: dict
     ) -> html.Div:
         """Generate the layout for the system's input fields based on the cls.system_inputs variable.
 

@@ -57,7 +57,7 @@ app.layout = html.Div(
 )
 def render_system_inputs(system_key):
     system_class = SIM_OPTIONS[system_key]
-    return system_class.make_layout()
+    return system_class.make_layout({}, {})
 
 
 # Dynamically generate controller input fields when controller selection changes
