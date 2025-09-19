@@ -16,7 +16,7 @@ class StateFeedbackController(BaseController):
     controller_inputs = {
         "controller_type": {
             "type": "dropdown",
-            "value": "Integral Pole Placement",
+            "value": "Pole Placement",
             "description": "Controller design method",
             "options": [
                 "Pole Placement",
@@ -142,15 +142,25 @@ class StateFeedbackController(BaseController):
                     [self.C, np.zeros((self.C.shape[0], self.B.shape[1]))],
                 ]
             )
-            self.Bs = np.block([[self.B], [np.zeros((1, 1))]])
+            self.Bs = np.block([[self.B], [np.zeros((self.B.shape[1], self.C.shape[0]))]])
             K = self._calculate_gain_matrices_pole_placement(
                 self.As, self.Bs, self.lambda_c
             )
-            # Break out the gain matrix
-            self.K1 = K[:, :-1]
-            self.K1 = self.K1.reshape(1, -1)
-            self.K2 = K[:, -1]
-            self.K2 = self.K2.reshape(1, -1)
+
+            # Break out the gain matrices
+            # the dimensions should match u = -K1*x (u, n)
+            # and xdot = B * u
+            # for the dimensions to work out K1 should be (m, n)
+            # Where B is (n, m) and A is (n, n)
+            self.K1 = K[:, :-self.C.shape[0]]
+            self.K1 = self.K1.reshape(self.B.shape[1], self.A.shape[0])
+
+            # the dimensions should match u = -K2*sigma (u, p)
+            # There is one sigma is a column vector for each output
+            # for the dimensions to work out K2 should be (m, p)
+            # Where B is (n, m) and C is (p, n)
+            self.K2 = K[:, -self.C.shape[0]:]
+            self.K2 = self.K2.reshape(self.B.shape[1], self.C.shape[0])
         else:
             raise ValueError(
                 f"Unknown controller design method: {self.controller_type}"
@@ -297,8 +307,8 @@ class StateFeedbackController(BaseController):
             ]
         )
 
-        commendable = np.linalg.det(commandability_matrix) != 0
+        commandable = np.linalg.det(commandability_matrix) != 0
 
-        verb = "IS" if commendable else "ISNT"
+        verb = "IS" if commandable else "ISNT"
 
-        return html.H3(f"System {verb} commendable")
+        return html.H3(f"System {verb} commandable")
