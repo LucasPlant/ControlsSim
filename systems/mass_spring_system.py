@@ -3,7 +3,13 @@ import numpy as np
 import plotly.graph_objs as go
 
 from .base_system import BaseSystem
-from controllers import BaseController
+from controllers import (
+    BaseController,
+    NoopController,
+    PIDController,
+    StateFeedbackController,
+    StateFeedbackIntegralController,
+)
 from .base_linear_system import BaseLinearSystem
 
 
@@ -11,6 +17,14 @@ class MassSpringSystem(BaseLinearSystem):
     """A class representing a mass-spring system."""
 
     title = "Mass-Spring System"
+
+    # Controllers that are compatible with this system
+    allowed_controllers = {
+        "No Controller": NoopController,
+        "PID Controller": PIDController,
+        "State Feedback": StateFeedbackController,
+        "State Feedback Integral": StateFeedbackIntegralController,
+    }
 
     system_inputs = {
         "mass": {
@@ -63,12 +77,13 @@ class MassSpringSystem(BaseLinearSystem):
         damping_coefficient: float,
         final_time: float,
         dt: float,
-        controller: BaseController,
+        controller_type: str,
         state_0: float,  # Initial position
         state_1: float,  # Initial velocity
+        controller_inputs: dict
     ):
         """
-        Initialize the mass-spring system with parameters and a controller.
+        Initialize the mass-spring system with parameters and controller.
 
         Args:
             mass: Mass of the system.
@@ -76,9 +91,11 @@ class MassSpringSystem(BaseLinearSystem):
             damping_coefficient: Damping coefficient of the system.
             final_time: Total simulation time.
             dt: Time step for the simulation.
-            controller: An instance of a controller that implements the BaseController interface.
+            controller_type: The name of the controller to use.
+            state_0: Initial position.
+            state_1: Initial velocity.
         """
-        super().__init__(controller, dt, final_time)
+        super().__init__(dt, final_time, controller_type, controller_inputs)
         self.mass = mass
         self.spring_constant = spring_constant
         self.damping_coefficient = damping_coefficient

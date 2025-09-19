@@ -2,26 +2,13 @@ from dash import Dash, html, dcc, Input, Output, State
 import dash
 from dash.dependencies import ALL
 
-from controllers import (
-    BaseController,
-    NoopController,
-    PIDController,
-    StateFeedbackController,
-    StateFeedbackIntegralController,
-)
-from systems import BaseSystem, MassSpringSystem
+from systems import BaseSystem, MassSpringSystem, TurtleBot
 
 LOCAL = False
 
 SIM_OPTIONS: dict[str, type[BaseSystem]] = {
     "Mass-Spring System": MassSpringSystem,
-}
-
-CONTROLLER_OPTIONS: dict[str, type[BaseController]] = {
-    "No Controller": NoopController,
-    "PID Controller": PIDController,
-    "State Feedback": StateFeedbackController,
-    "State Feedback Integral": StateFeedbackIntegralController,
+    "TurtleBot": TurtleBot,
 }
 
 app = Dash("Control Visualization App")
@@ -40,16 +27,7 @@ app.layout = html.Div(
                             options=[{"label": k, "value": k} for k in SIM_OPTIONS],
                             value=list(SIM_OPTIONS.keys())[0],
                         ),
-                        html.H2("Select a Controller"),
-                        dcc.Dropdown(
-                            id="controller-selector",
-                            options=[
-                                {"label": k, "value": k} for k in CONTROLLER_OPTIONS
-                            ],
-                            value=list(CONTROLLER_OPTIONS.keys())[0],
-                        ),
                         html.Div(id="system-inputs-container"),
-                        html.Div(id="controller-inputs-container"),
                         html.Button("Run Simulation", id="run-btn"),
                     ],
                     style={"flex": "1", "minWidth": "350px", "marginRight": "40px"},
@@ -68,7 +46,6 @@ app.layout = html.Div(
         ),
         html.Div(id="simulation-plots-container"),
         dcc.Store(id="system-input-store"),
-        dcc.Store(id="controller-input-store"),
     ]
 )
 
@@ -83,34 +60,52 @@ def render_system_inputs(system_key):
     return system_class.make_layout()
 
 
-# Dynamically generate controller input fields
+# Dynamically generate controller input fields when controller selection changes
 @app.callback(
-    Output("controller-inputs-container", "children"),
-    Input("controller-selector", "value"),
+    Output({"type": "controller-inputs", "system": ALL}, "children"),
+    Input({"type": "input", "source": "system", "name": "controller_type"}, "value"),
+    State("system-selector", "value"),
+    State("system-input-store", "data")
 )
-def render_controller_inputs(controller_key):
-    controller_class = CONTROLLER_OPTIONS[controller_key]
-    return controller_class.make_layout()
+def render_controller_inputs(controller_type, system_key, inputs):
+    if not controller_type or not system_key:
+        return [html.Div()]
+    
+    system_class = SIM_OPTIONS[system_key]
+    controller_class = system_class.allowed_controllers.get(controller_type)
+    
+    if not controller_class:
+        return [html.Div()]
+    
+    # Get existing controller inputs if they exist
+    controller_inputs = {}
+    if inputs and "controller" in inputs:
+        controller_inputs = inputs["controller"]
+    
+    return [controller_class.make_layout(controller_inputs)]
 
 
-# Store system inputs as a json for kwargs
+# Store all inputs and sort between controller and system inputs
 @app.callback(
     Output("system-input-store", "data"),
-    Input({"type": "system-input", "name": ALL}, "value"),
-    State({"type": "system-input", "name": ALL}, "id"),
+    Input({"type": "input", "source": ALL, "name": ALL}, "value"),
+    State({"type": "input", "source": ALL, "name": ALL}, "id"),
 )
-def store_system_inputs(values, ids):
-    return {id_["name"]: val for val, id_ in zip(values, ids)}
-
-
-# Store controller inputs as a json for kwargs
-@app.callback(
-    Output("controller-input-store", "data"),
-    Input({"type": "controller-input", "name": ALL}, "value"),
-    State({"type": "controller-input", "name": ALL}, "id"),
-)
-def store_controller_inputs(values, ids):
-    return {id_["name"]: val for val, id_ in zip(values, ids)}
+def store_inputs(values, ids):
+    # Separate system and controller inputs
+    system_inputs = {}
+    controller_inputs = {}
+    
+    for val, id_ in zip(values, ids):
+        if id_["source"] == "system":
+            system_inputs[id_["name"]] = val
+        elif id_["source"] == "controller":
+            controller_inputs[id_["name"]] = val
+    
+    return {
+        "system": system_inputs,
+        "controller": controller_inputs
+    }
 
 
 # Run simulation
@@ -118,22 +113,19 @@ def store_controller_inputs(values, ids):
     Output("simulation-plots-container", "children"),
     Input("run-btn", "n_clicks"),
     State("system-selector", "value"),
-    State("controller-selector", "value"),
     State("system-input-store", "data"),
-    State("controller-input-store", "data"),
 )
-def run_simulation(
-    n_clicks, system_key, controller_key, system_inputs, controller_inputs
-):
-    if not n_clicks:
+def run_simulation(n_clicks, system_key, inputs):
+    if not n_clicks or not inputs:
         return dash.no_update
 
     system_class = SIM_OPTIONS[system_key]
-    controller_class = CONTROLLER_OPTIONS[controller_key]
+    
+    # Combine system and controller inputs
+    system_inputs = inputs.get("system", {})
+    controller_inputs = inputs.get("controller", {})
 
-    controller = controller_class(**controller_inputs)
-    system = system_class(**system_inputs, controller=controller)
-
+    system = system_class(**system_inputs, controller_inputs=controller_inputs)
     system.simulate()
 
     return system.make_simulation_plots()
@@ -142,19 +134,20 @@ def run_simulation(
 @app.callback(
     Output("analysis-plots-container", "children"),
     Input("system-input-store", "data"),
-    Input("controller-input-store", "data"),
     State("system-selector", "value"),
-    State("controller-selector", "value"),
 )
-def update_analysis_plots(system_inputs, controller_inputs, system_key, controller_key):
-    if not system_inputs:
+def update_analysis_plots(inputs, system_key):
+    if not inputs or not system_key:
         return dash.no_update
 
     system_class = SIM_OPTIONS[system_key]
-    controller_class = CONTROLLER_OPTIONS[controller_key]
+    
+    # Combine system and controller inputs
 
-    controller = controller_class(**controller_inputs)
-    system = system_class(**system_inputs, controller=controller)
+    system_inputs = inputs.get("system", {})
+    controller_inputs = inputs.get("controller", {})
+
+    system = system_class(**system_inputs, controller_inputs=controller_inputs)
 
     # Assumes make_analysis_plots() returns Dash components
     return system.make_analysis_fields()

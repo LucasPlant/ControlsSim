@@ -14,28 +14,36 @@ class BaseController:
     state_info = []  # list with dict containing name, value, description
 
     @classmethod
-    def make_layout(cls):
+    def make_layout(cls, controller_inputs: dict) -> html.Div:
         """Generate the layout for the controller's input fields based on the cls.controller_inputs variable."""
+        
+        def make_input_field(name, props):
+            """Create an input field based on its type."""
+            if props["type"] == "dropdown":
+                return html.Div([
+                    html.Label(props["description"]),
+                    dcc.Dropdown(
+                        id={"type": "input", "source": "controller", "name": name},
+                        options=[{"label": k, "value": k} for k in props["options"].keys()],
+                        value=props["value"],
+                        clearable=False,
+                    ),
+                ])
+            else:
+                return html.Div([
+                    html.Label(props["description"]),
+                    dcc.Input(
+                        id={"type": "input", "source": "controller", "name": name},
+                        type=props["type"],
+                        value=props["value"],
+                        debounce=True,
+                    ),
+                ])
+        
         return html.Div(
             [
                 html.H2(f"{cls.title} Inputs"),
-                *[
-                    html.Div(
-                        [
-                            html.Label(props["description"]),
-                            dcc.Input(
-                                id={
-                                    "type": "controller-input",
-                                    "name": name,
-                                },
-                                type=props["type"],
-                                value=props["value"],
-                                debounce=True,
-                            ),
-                        ]
-                    )
-                    for name, props in cls.controller_inputs.items()
-                ],
+                *[make_input_field(name, props) for name, props in cls.controller_inputs.items()],
             ]
         )
 
