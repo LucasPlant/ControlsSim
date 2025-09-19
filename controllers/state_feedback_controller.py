@@ -16,7 +16,7 @@ class StateFeedbackController(BaseController):
     controller_inputs = {
         "controller_type": {
             "type": "dropdown",
-            "value": "Pole Placement",
+            "value": "Integral Pole Placement",
             "description": "Controller design method",
             "options": [
                 "Pole Placement",
