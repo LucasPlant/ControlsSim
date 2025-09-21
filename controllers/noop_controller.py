@@ -1,4 +1,3 @@
-from numpy import ndarray
 import plotly.graph_objs as go
 from .base_controller import BaseController
 

@@ -58,12 +58,26 @@ Contributions are welcome! If you'd like to contribute please reach out to me
 ## Roadmap
 
 ### High Priority
-- [ ] Define and complete MVP features
-- [ ] Deploy web application
-- [ ] Create requirements.txt or Docker container
 
-### Nice to have
-- [ ] Unit testing
+### Advanced Features
+- [ ] Stochastic Elements *
+  - [ ] Sensor noise simulation
+  - [ ] Actuator noise
+  - [ ] Disturbance rejection
+- [ ] Propagator improvements
+  - [ ] Controller update period
+
+### System Models
+- [ ] Cart pole system *
+- [ ] Two-mass spring system
+- [ ] 2D/3D mass with force
+  - [ ] Orientation and attitude
+  - [ ] COSMOS
+  - [ ] Thruster allocation
+- [ ] Inverted Pendulum *
+- [ ] Cruise control simulation
+- [ ] Multiple pendulum systems
+- [ ] Orbital body simulation *
 
 ### Analysis Features
 - [ ] Root Locus plots
@@ -73,44 +87,28 @@ Contributions are welcome! If you'd like to contribute please reach out to me
 - [ ] Controllable subspaces analysis
 - [ ] Kalman decompositions
 
-### System Models
-- [ ] Cart pole system
-- [ ] Two-mass spring system
-- [ ] 2D/3D mass with force
-  - [ ] Orientation and attitude
-  - [ ] COSMOS
-  - [ ] Thruster allocation
-- [ ] Inverted Pendulum / Cart pole
-- [ ] Cruise control simulation
-- [ ] Multiple pendulum systems
-- [ ] Orbital body simulation
-
 ### User Interface
-- [ ] Controller state initialization
+- [ ] Controller state initialization *
 - [ ] State persistence
 - [ ] UI organization and beautification
 
 ### Control Systems
 - [ ] MIMO Controllers
-  - [ ] Array dimension compatibility
-  - [ ] MIMO FSFB using pole placement
   - [ ] Mode shaping
 - [ ] Optimal Controllers
-  - [ ] LQR (Finite/Infinite time horizon)
+  - [ ] LQR (Finite/Infinite time horizon) *
   - [ ] Kalman Filter
 - [ ] Feed Forward / Trajectory Planning
+  - [ ] MIMO targets *
+  - [ ] Functional targets *
+    - [ ] Polynomial
+    - [ ] Sinusoidal
   - [ ] Plant inversion
-  - [ ] Polynomial trajectory planning
   - [ ] Optimal trajectories
   - [ ] Command shaping
 
-### Advanced Features
-- [ ] Stochastic Elements
-  - [ ] Sensor noise simulation
-  - [ ] Actuator noise
-  - [ ] Disturbance rejection
-- [ ] Propagator improvements
-  - [ ] Controller update period
+### Nice to have
+  - [ ] Unit testing
 
 ## Development Guidelines
 - Maintain comprehensive inline documentation

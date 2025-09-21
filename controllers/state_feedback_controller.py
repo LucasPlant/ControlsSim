@@ -14,7 +14,7 @@ class StateFeedbackController(BaseController):
     title = "State Feedback Controller"
 
     controller_inputs = {
-        "controller_type": {
+        "feedback_type": {
             "type": "dropdown",
             "value": "Integral Pole Placement",
             "description": "Controller design method",
@@ -43,22 +43,16 @@ class StateFeedbackController(BaseController):
             "value": -1.0,
             "description": "Controller eigenvalue (lambda_c)",
         },
-        "y_target": {
-            "type": "number",
-            "value": 1.0,
-            "description": "Target position (y_target)",
-        },
     }
 
     def __init__(
-        self, y_target, lambda_e, lambda_c, controller_type, state_estimator_type
+        self, lambda_e, lambda_c, feedback_type, state_estimator_type, trajectory_generator, trajectory_generator_inputs
     ):
-        super().__init__()
+        super().__init__(trajectory_generator, trajectory_generator_inputs)
 
         self.lambda_e = lambda_e
         self.lambda_c = lambda_c
-        self.y_target = y_target
-        self.controller_type = controller_type  # Map from UI parameter name
+        self.feedback_type = feedback_type  # Map from UI parameter name
         self.state_estimator_type = state_estimator_type
 
         # Initialize the gain matrices
@@ -75,10 +69,8 @@ class StateFeedbackController(BaseController):
         self.L = np.array([])
         self.K1 = np.array([])
 
-    def initialize(self, A, B, C, dt, t, state_info):
-        super().initialize(A, B, C, dt, t, state_info)
-
-        self.state_info = state_info
+    def initialize(self, A, B, C, dt, t, state_info, output_info):
+        super().initialize(A, B, C, dt, t, state_info, output_info)
 
         # Store the system matrices
         self.A = A
@@ -97,7 +89,7 @@ class StateFeedbackController(BaseController):
     def step(self, y, index):
         x_hat = self.x_hat[index, :]
 
-        if self.controller_type == "Integral Pole Placement":
+        if self.feedback_type == "Integral Pole Placement":
             # u = - k1 * x_hat - k2 * sigma
             u = -1 * (self.K1 @ x_hat) + -1 * (self.K2 @ self.sigma[index, :])
         else:
@@ -111,7 +103,7 @@ class StateFeedbackController(BaseController):
 
         # update the integral term sigma
         # sigma(i+1) = sigma + dt * error
-        self.sigma[index + 1, :] = self.sigma[index, :] + self.dt * (y - self.y_target)
+        self.sigma[index + 1, :] = self.sigma[index, :] + self.dt * (y - self.reference_trajectory[index])
 
         return u
 
@@ -129,11 +121,11 @@ class StateFeedbackController(BaseController):
         Returns:
         Controller and estimator gain matrices (K, L)
         """
-        if self.controller_type == "Pole Placement":
+        if self.feedback_type == "Pole Placement":
             self.K = self._calculate_gain_matrices_pole_placement(
                 self.A, self.B, self.lambda_c
             )
-        elif self.controller_type == "Integral Pole Placement":
+        elif self.feedback_type == "Integral Pole Placement":
             # Calculate the augmented state space matrices As and Bs
             # From A script and B script in the ECE4550 curriculum
             self.As = np.block(
@@ -163,7 +155,7 @@ class StateFeedbackController(BaseController):
             self.K2 = self.K2.reshape(self.B.shape[1], self.C.shape[0])
         else:
             raise ValueError(
-                f"Unknown controller design method: {self.controller_type}"
+                f"Unknown controller design method: {self.feedback_type}"
             )
 
         if self.state_estimator_type == "Pole Placement":
@@ -204,7 +196,7 @@ class StateFeedbackController(BaseController):
 
         self.calculate_gain_matrices()
 
-        if self.controller_type == "Integral Pole Placement":
+        if self.feedback_type == "Integral Pole Placement":
             BK1 = B @ self.K1
             BK2 = B @ self.K2
             LC = self.L @ C

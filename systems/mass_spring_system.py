@@ -24,7 +24,7 @@ class MassSpringSystem(BaseLinearSystem):
         "State Feedback": StateFeedbackController,
     }
 
-    system_inputs = {
+    system_args = {
         "mass": {
             "type": "number",
             "value": 1.0,
@@ -42,7 +42,7 @@ class MassSpringSystem(BaseLinearSystem):
         },
     }
 
-    simulation_inputs = {
+    simulation_args = {
         "final_time": {
             "type": "number",
             "value": 10.0,

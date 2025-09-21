@@ -3,6 +3,7 @@ import numpy as np
 import plotly.graph_objs as go
 from controllers import BaseController
 from plot_utils import mode_plot, multivar_plot
+from utils import make_input_field, make_state_input_field
 
 
 class BaseSystem:
@@ -12,109 +13,63 @@ class BaseSystem:
 
     title = None
 
-    system_inputs = {}
+    system_args = {}
 
-    simulation_inputs = {}
+    simulation_args = {}
 
     state_info = []  # list with dict containing name, value, description
 
-    output_info = []  # list of strings with names
+    output_info = []  # list of strings that are output names
 
-    input_info = []  # list of strings with names
+    input_info = []  # list of strings that are input names
 
     # Dictionary mapping controller names to controller classes that are compatible with this system
     allowed_controllers: dict[str, type[BaseController]] = {}
 
     @classmethod
-    def make_layout(
-        cls, system_inputs: dict, controller_inputs: dict
-    ) -> html.Div:
-        """Generate the layout for the system's input fields based on the cls.system_inputs variable.
+    def make_layout(cls, system_args: dict, controller_inputs: dict) -> html.Div:
+        """Generate the layout for the system's input fields based on the cls.system_args variable.
 
         Returns:
         A div containing the layout for the systems input fields
         """
-
-        def make_input_fields(inputs: dict) -> list:
-            """
-            Makes the gui input fields for the system.
-
-            Args:
-            inputs: a dict containing the systems inputs
-
-            Returns:
-            A list of fields that will be displayed in a DIV
-            """
-            input_fields = []
-            # Parameter inputs
-            for name, props in inputs.items():
-                input_fields.extend(
-                    [
-                        html.Label(props["description"]),
-                        dcc.Input(
-                            id={"type": "input", "source": "system", "name": name},
-                            type=props["type"],
-                            value=props["value"],
-                            debounce=True,
-                        ),
-                    ]
-                )
-            return input_fields
-
-        def make_state_inputs(state_info: list[dict[str, str]]) -> list:
-            """
-            Makes the inputs for the state initialization
-
-            Args:
-            state_info: dict containing the info to make the state fields
-
-            Returns:
-            items to put in the input field DIV
-            """
-            input_fields = []
-            # State Initialization inputs
-            for idx, props in enumerate(state_info):
-                input_fields.extend(
-                    [
-                        html.Label(props["name"] + ": " + props["description"]),
-                        dcc.Input(
-                            id={
-                                "type": "input",
-                                "source": "system",
-                                "name": f"state_{idx}",
-                            },
-                            type="number",
-                            value=props["value"],
-                            debounce=True,
-                        ),
-                    ]
-                )
-
-            return input_fields
 
         return html.Div(
             [
                 html.H1(cls.title),
                 # System Inputs
                 html.H2("System Inputs"),
-                html.Div(make_input_fields(cls.system_inputs)),
+                html.Div([
+                    make_input_field(name, props, "system", system_args)
+                    for name, props in cls.system_args.items()
+                ]),
                 html.H2("Simulation Inputs"),
-                html.Div(make_input_fields(cls.simulation_inputs)),
+                html.Div([
+                    make_input_field(name, props, "system", system_args)
+                    for name, props in cls.simulation_args.items()
+                ]),
                 html.H2("State Initialization"),
-                html.Div(make_state_inputs(cls.state_info)),
+                html.Div([
+                    field
+                    for idx, props in enumerate(cls.state_info)
+                    for field in make_state_input_field(f"state_{idx}", props, "system", system_args)
+                ]),
                 # Controller Selection
                 html.H2("Select Controller"),
-                dcc.Dropdown(
-                    id={"type": "input", "source": "system", "name": "controller_type"},
-                    options=[
-                        {"label": k, "value": k} for k in cls.allowed_controllers.keys()
-                    ],
-                    value=(
-                        list(cls.allowed_controllers.keys())[0]
-                        if cls.allowed_controllers
-                        else None
-                    ),
-                    clearable=False,
+                make_input_field(
+                    "controller_type",
+                    {
+                        "type": "dropdown",
+                        "value": (
+                            list(cls.allowed_controllers.keys())[0]
+                            if cls.allowed_controllers
+                            else None
+                        ),
+                        "description": "Controller type",
+                        "options": list(cls.allowed_controllers.keys()),
+                    },
+                    "system",
+                    controller_inputs,
                 ),
                 # Container for controller-specific inputs - this will be populated by callback
                 html.Div(id={"type": "controller-inputs", "system": cls.__name__}),
@@ -208,7 +163,7 @@ class BaseSystem:
         self.y[0, :] = self.g(self.x[0, :])
 
         self.controller.initialize(
-            self.A(), self.B(), self.C(), self.dt, self.t, self.state_info
+            self.A(), self.B(), self.C(), self.dt, self.t, self.state_info, self.output_info
         )
 
         self.runge_kutta_4th_order()

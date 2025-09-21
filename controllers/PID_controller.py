@@ -21,11 +21,6 @@ class PIDController(BaseController):
         },
         "Ki": {"type": "number", "value": 0.0, "description": "Integral gain (Ki)"},
         "Kd": {"type": "number", "value": 5.0, "description": "Derivative gain (Kd)"},
-        "y_target": {
-            "type": "number",
-            "value": 1.0,
-            "description": "Target position (y_target)",
-        },
     }
 
     state_info = [
@@ -41,15 +36,14 @@ class PIDController(BaseController):
         },
     ]
 
-    def __init__(self, y_target, Kp, Ki, Kd):
-        super().__init__()
-        self.y_target = y_target
+    def __init__(self, Kp, Ki, Kd, trajectory_generator, trajectory_generator_inputs):
+        super().__init__(trajectory_generator, trajectory_generator_inputs)
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
 
-    def initialize(self, A, B, C, dt, t, state_info):
-        super().initialize(A, B, C, dt, t, state_info)
+    def initialize(self, A, B, C, dt, t, state_info, output_info):
+        super().initialize(A, B, C, dt, t, state_info, output_info)
 
         self.integral = 0.0
         self.prev_error = 0.0
@@ -58,7 +52,7 @@ class PIDController(BaseController):
         self.state = np.zeros((len(self.t), 2))  # Placeholder for state
 
     def step(self, y, index):
-        error = self.y_target - y
+        error = self.reference_trajectory[index] - y
 
         derivative = (error - self.prev_error) / self.dt
         if index == 0:

@@ -2,6 +2,13 @@ from dash import html, dcc
 import plotly.graph_objs as go
 import numpy as np
 from plot_utils import mode_plot, multivar_plot
+from utils import make_input_field
+from .trajectory_generators import (
+    TrajectoryGenerator, 
+    ConstantTrajectoryGenerator,
+    StepTrajectoryGenerator, 
+    SinusoidalTrajectoryGenerator
+)
 
 
 class BaseController:
@@ -13,57 +20,56 @@ class BaseController:
 
     state_info = []  # list with dict containing name, value, description
 
+    trajectory_generators: dict[str, type[TrajectoryGenerator]] = {
+        "Constant": ConstantTrajectoryGenerator,
+        "Step": StepTrajectoryGenerator,
+        "Sinusoidal": SinusoidalTrajectoryGenerator,
+    }  # dict of trajectory generator name to class
+
     @classmethod
-    def make_layout(cls, controller_inputs: dict) -> html.Div:
+    def make_layout(cls, controller_inputs: dict, input_info: list, output_info: list) -> html.Div:
         """Generate the layout for the controller's input fields based on the cls.controller_inputs variable."""
 
-        def make_input_field(name, props):
-            """Create an input field based on its type."""
-            if props["type"] == "dropdown":
-                return html.Div(
-                    [
-                        html.Label(props["description"]),
-                        dcc.Dropdown(
-                            id={"type": "input", "source": "controller", "name": name},
-                            options=[
-                                {"label": k, "value": k} for k in props["options"]
-                            ],
-                            value=props["value"],
-                            clearable=False,
-                        ),
-                    ]
-                )
-            else:
-                return html.Div(
-                    [
-                        html.Label(props["description"]),
-                        dcc.Input(
-                            id={"type": "input", "source": "controller", "name": name},
-                            type=props["type"],
-                            value=props["value"],
-                            debounce=True,
-                        ),
-                    ]
-                )
+        # Add trajectory generator dropdown to controller inputs
+        controller_fields = [
+            make_input_field(name, props, "controller", controller_inputs)
+            for name, props in cls.controller_inputs.items()
+        ]
+        
+        # Add trajectory generator selection dropdown
+        trajectory_generator_field = make_input_field("trajectory_generator",
+            {
+                "type": "dropdown",
+                "value": "Constant",
+                "description": "Trajectory generator type",
+                "options": list(cls.trajectory_generators.keys()),
+            },
+            "controller",
+            controller_inputs
+        )
 
         return html.Div(
             [
                 html.H2(f"{cls.title} Inputs"),
-                *[
-                    make_input_field(name, props)
-                    for name, props in cls.controller_inputs.items()
-                ],
+                *controller_fields,
+                html.H3("Trajectory Generation"),
+                trajectory_generator_field,
+                html.Div(id={"type": "trajectory-inputs", "controller": cls.title})
             ]
         )
 
-    def __init__(self):
+    def __init__(self, trajectory_generator: str = "Constant", trajectory_generator_inputs: dict = {}):
         """
         Base initialization method inititializes time and u
         TODO: is u really needed to be stored here
         """
+        self.trajectory_generator = self.trajectory_generators[trajectory_generator]
+        self.trajectory_generator_inputs = trajectory_generator_inputs
+
         self.t = np.ndarray([])  # Placeholder for time array
         self.state = np.ndarray([])  # Placeholder for internal state
         self.u = np.ndarray([])  # Placeholder for control input
+        self.reference_trajectory = np.ndarray([])  # Placeholder for reference trajectory
 
     def initialize(
         self,
@@ -73,6 +79,7 @@ class BaseController:
         dt: float,
         t: np.ndarray,
         state_info: list[dict[str, str]],
+        output_info: list[dict[str, str]],
     ):
         """
         Initialize the controller and set a time step.
@@ -88,6 +95,9 @@ class BaseController:
             t: the time array
             state_info: list of dictionaries containing state information
         """
+        self.state_info = state_info
+        self.output_info = output_info
+
         # Validate matrix dimensions
         # TODO do really want to keep this here i feel like the validation maybe should be elsewhere
         state_dim = A.shape[0]
@@ -109,6 +119,11 @@ class BaseController:
         self.t = t
         # Initialize control input array with proper dimensions
         self.u = np.zeros((len(self.t), input_dim))
+
+        # initialize the reference trajectory
+        self.reference_trajectory = self.trajectory_generator.generate(
+            A, B, C, t, self.trajectory_generator_inputs
+        )
 
     def step(self, y: np.ndarray, index: int) -> np.ndarray:
         """
@@ -136,6 +151,12 @@ class BaseController:
                 self.t,
                 [state["name"] for state in self.state_info],
                 "Controller states over time",
+            ),
+            multivar_plot(
+                self.reference_trajectory,
+                self.t,
+                [f"ref_{output}" for output in self.output_info],
+                "Reference trajectory over time",
             )
         ]
 
