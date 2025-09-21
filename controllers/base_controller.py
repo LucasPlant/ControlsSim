@@ -27,7 +27,13 @@ class BaseController:
     }  # dict of trajectory generator name to class
 
     @classmethod
-    def make_layout(cls, controller_inputs: dict, input_info: list, output_info: list) -> html.Div:
+    def make_state_initialization_field(cls, controller_inputs: dict, input_info: list, output_info: list, state_info: list) -> html.Div:
+        """Generate the layout for a state initialization field.
+        Should be overridden in child classes if the controller has internal states to be initialized."""
+        return html.Div([])
+
+    @classmethod
+    def make_layout(cls, controller_inputs: dict, input_info: list, output_info: list, state_info: list) -> html.Div:
         """Generate the layout for the controller's input fields based on the cls.controller_inputs variable."""
 
         # Add trajectory generator dropdown to controller inputs
@@ -52,13 +58,14 @@ class BaseController:
             [
                 html.H2(f"{cls.title} Inputs"),
                 *controller_fields,
+                cls.make_state_initialization_field(controller_inputs, input_info, output_info, state_info),
                 html.H3("Trajectory Generation"),
                 trajectory_generator_field,
                 html.Div(id={"type": "trajectory-inputs", "controller": cls.title})
             ]
         )
 
-    def __init__(self, trajectory_generator: str = "Constant", trajectory_generator_inputs: dict = {}):
+    def __init__(self, trajectory_generator: str = "Constant", trajectory_generator_inputs: dict = {}, initial_state: dict = {}):
         """
         Base initialization method inititializes time and u
         TODO: is u really needed to be stored here
@@ -95,7 +102,6 @@ class BaseController:
             t: the time array
             state_info: list of dictionaries containing state information
         """
-        self.state_info = state_info
         self.output_info = output_info
 
         # Validate matrix dimensions

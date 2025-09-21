@@ -3,6 +3,7 @@ import numpy as np
 import control
 from scipy.signal import place_poles
 from dash import html
+from utils import make_state_input_field
 
 
 class StateFeedbackController(BaseController):
@@ -45,15 +46,30 @@ class StateFeedbackController(BaseController):
         },
     }
 
+    @classmethod
+    def make_state_initialization_field(cls, controller_inputs: dict, input_info: list, output_info: list, state_info: list) -> html.Div:
+        # Create input fields for each state variable to initialize estimated states
+        return html.Div(
+            [
+                html.H3("State Estimator Initialization"),
+                *[
+                    field
+                    for idx, props in enumerate(state_info)
+                    for field in make_state_input_field(f"state_{idx}", props, "controller-state")
+                ]
+            ]
+        )
+
     def __init__(
-        self, lambda_e, lambda_c, feedback_type, state_estimator_type, trajectory_generator, trajectory_generator_inputs
+        self, lambda_e, lambda_c, feedback_type, state_estimator_type, trajectory_generator, trajectory_generator_inputs, initial_state={}
     ):
-        super().__init__(trajectory_generator, trajectory_generator_inputs)
+        super().__init__(trajectory_generator, trajectory_generator_inputs, initial_state)
 
         self.lambda_e = lambda_e
         self.lambda_c = lambda_c
         self.feedback_type = feedback_type  # Map from UI parameter name
         self.state_estimator_type = state_estimator_type
+        self.initial_state = initial_state
 
         # Initialize the gain matrices
         self.K = np.array([])
@@ -72,6 +88,20 @@ class StateFeedbackController(BaseController):
     def initialize(self, A, B, C, dt, t, state_info, output_info):
         super().initialize(A, B, C, dt, t, state_info, output_info)
 
+        integrator_info = [{"name": f"integrator_{idx}", "value": 0.0, "description": f"Integrator state {idx}"} for idx in range(len(self.output_info))] if self.feedback_type == "Integral Pole Placement" else []
+        self.state_info = state_info + integrator_info
+
+        # Parse the initial state from the input dictionary
+        degree = A.shape[0]
+        self.x_hat_0 = np.zeros(degree)
+        for idx in range(degree):
+            key = f"state_{idx}"
+            if key in self.initial_state:
+                try:
+                    self.x_hat_0[idx] = float(self.initial_state[key])
+                except ValueError:
+                    self.x_hat_0[idx] = 0.0  # Default to 0.0 if conversion fails
+
         # Store the system matrices
         self.A = A
         self.B = B
@@ -83,8 +113,18 @@ class StateFeedbackController(BaseController):
         # Initialize the estimated state array
         degree = self.A.shape[0]
         self.x_hat = np.zeros((len(self.t), degree))
+        self.x_hat[0, :] = self.x_hat_0
         self.sigma = np.zeros((len(self.t), self.C.shape[0]))
-        self.state = self.x_hat  # have the state pointer point at x_hat for plotting
+        
+        # Combine estimated states and integrator states for plotting
+        if self.feedback_type == "Integral Pole Placement":
+            # Create combined state array that includes both x_hat and sigma
+            self.state = np.zeros((len(self.t), degree + self.C.shape[0]))
+            self.state[0, :degree] = self.x_hat_0
+            self.state[0, degree:] = self.sigma[0, :]
+        else:
+            # Only estimated states for regular pole placement
+            self.state = self.x_hat
 
     def step(self, y, index):
         x_hat = self.x_hat[index, :]
@@ -104,6 +144,12 @@ class StateFeedbackController(BaseController):
         # update the integral term sigma
         # sigma(i+1) = sigma + dt * error
         self.sigma[index + 1, :] = self.sigma[index, :] + self.dt * (y - self.reference_trajectory[index])
+
+        # Update combined state for plotting (if using integral control)
+        if self.feedback_type == "Integral Pole Placement":
+            degree = self.A.shape[0]
+            self.state[index + 1, :degree] = self.x_hat[index + 1, :]
+            self.state[index + 1, degree:] = self.sigma[index + 1, :]
 
         return u
 

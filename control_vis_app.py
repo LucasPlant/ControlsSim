@@ -77,6 +77,7 @@ def render_controller_inputs(controller_type, system_key, inputs):
     controller_class = system_class.allowed_controllers.get(controller_type)
     input_info = system_class.input_info
     output_info = system_class.output_info
+    state_info = system_class.state_info
 
     if not controller_class:
         return [html.Div()]
@@ -88,7 +89,7 @@ def render_controller_inputs(controller_type, system_key, inputs):
 
     return [
         html.Div([
-            controller_class.make_layout(controller_inputs, input_info, output_info),
+            controller_class.make_layout(controller_inputs, input_info, output_info, state_info),
         ])
     ]
 
@@ -144,6 +145,7 @@ def store_inputs(values, ids):
     system_args = {}
     controller_inputs = {}
     trajectory_generator_inputs = {}
+    initial_controller_state = {}
 
     for val, id_ in zip(values, ids):
         if id_["source"] == "system":
@@ -152,8 +154,11 @@ def store_inputs(values, ids):
             controller_inputs[id_["name"]] = val
         elif id_["source"] == "trajectory_generator":
             trajectory_generator_inputs[id_["name"]] = val
+        elif id_["source"] == "controller-state":
+            initial_controller_state[id_["name"]] = val
     
     controller_inputs["trajectory_generator_inputs"] = trajectory_generator_inputs
+    controller_inputs["initial_state"] = initial_controller_state
 
     return {"system": system_args, "controller": controller_inputs}
 

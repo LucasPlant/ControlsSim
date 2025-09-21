@@ -38,6 +38,11 @@ class MotorizedPendulum(BaseSystem):
             "value": 9.8,
             "description": "Acceleration due to gravity (m/s^2)",
         },
+        "linearization_point": {
+            "type": "number",
+            "value": np.pi,
+            "description": "Point around which to linearize the system (radians) 0 is down pi is up",
+        },
     }
 
     simulation_args = {
@@ -71,6 +76,7 @@ class MotorizedPendulum(BaseSystem):
         mass: float,
         length: float,
         gravity: float,
+        linearization_point: float,
         final_time: float,
         dt: float,
         controller_type: str,
@@ -95,6 +101,7 @@ class MotorizedPendulum(BaseSystem):
         self.mass = mass
         self.length = length
         self.gravity = gravity
+        self.linearization_point = linearization_point
         self.initial_state = np.array([state_0, state_1], dtype=float)
 
     def f(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
@@ -110,9 +117,8 @@ class MotorizedPendulum(BaseSystem):
     def g(self, x: np.ndarray) -> np.ndarray:
         return np.array([x[0]])
 
-    # TODO determine the linearization point
     def A(self) -> np.ndarray:
-        linearization_point = np.array([np.pi, 0])
+        linearization_point = np.array([self.linearization_point, 0])
         return np.array(
             [
                 [0, 1],

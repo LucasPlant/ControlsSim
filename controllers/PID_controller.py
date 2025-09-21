@@ -36,8 +36,8 @@ class PIDController(BaseController):
         },
     ]
 
-    def __init__(self, Kp, Ki, Kd, trajectory_generator, trajectory_generator_inputs):
-        super().__init__(trajectory_generator, trajectory_generator_inputs)
+    def __init__(self, Kp, Ki, Kd, trajectory_generator, trajectory_generator_inputs, initial_state):
+        super().__init__(trajectory_generator, trajectory_generator_inputs, initial_state)
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd

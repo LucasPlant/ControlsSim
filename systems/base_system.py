@@ -250,7 +250,7 @@ class BaseSystem:
         Returns:
         A figure with the plot
         """
-        return multivar_plot(self.y, self.t, self.input_info, "Control input (u)")
+        return multivar_plot(self.u, self.t, self.input_info, "Control input (u)")
 
     def state_plot(self) -> go.Figure:
         """
