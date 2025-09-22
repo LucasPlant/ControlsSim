@@ -58,6 +58,7 @@ Contributions are welcome! If you'd like to contribute please reach out to me
 ## Roadmap
 
 ### High Priority
+- [ ] Low frequency zero analysis and cancellation
 
 ### Advanced Features
 - [ ] Stochastic Elements *

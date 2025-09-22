@@ -40,8 +40,8 @@ class MotorizedPendulum(BaseSystem):
         },
         "linearization_point": {
             "type": "number",
-            "value": np.pi,
-            "description": "Point around which to linearize the system (radians) 0 is down pi is up",
+            "value": 0,
+            "description": "Point around which to linearize the system (radians) 0 is up π is down",
         },
     }
 
@@ -57,7 +57,7 @@ class MotorizedPendulum(BaseSystem):
     state_info = [
         {
             "name": "Position",
-            "value": np.pi,
+            "value": 0,
             "description": "Initial position of the pendulum (radians)",
         },
         {
@@ -109,7 +109,8 @@ class MotorizedPendulum(BaseSystem):
         theta_dot = x[1]
         u = u[0]  # Torque input
 
-        theta_double_dot = (1/(self.mass * self.length**2) * u - 
+        # theta = 0 is now upward position, so we use sin(theta + π) = -sin(theta)
+        theta_double_dot = (1/(self.mass * self.length**2) * u + 
                             (self.gravity / self.length) * np.sin(theta))
         
         return np.array([theta_dot, theta_double_dot])
@@ -119,11 +120,12 @@ class MotorizedPendulum(BaseSystem):
 
     def A(self) -> np.ndarray:
         linearization_point = np.array([self.linearization_point, 0])
+        # With theta = 0 as upward, we use cos(theta + π) = -cos(theta) for linearization
         return np.array(
             [
                 [0, 1],
                 [
-                    -(self.gravity / self.length) * np.cos(linearization_point[0]),
+                    (self.gravity / self.length) * np.cos(linearization_point[0]),
                     0
                 ],
             ]
@@ -145,11 +147,11 @@ class MotorizedPendulum(BaseSystem):
         
         # Convert to Cartesian coordinates for pendulum bob
         x_pos = self.length * np.sin(theta)
-        y_pos = -self.length * np.cos(theta)  # Negative because we want down to be negative y
+        y_pos = self.length * np.cos(theta)  # Positive y is upward, theta=0 is up
         
         # Calculate velocity components (tangential to pendulum path)
         x_vel = self.length * theta_dot * np.cos(theta)
-        y_vel = self.length * theta_dot * np.sin(theta)
+        y_vel = -self.length * theta_dot * np.sin(theta)  # Adjusted for new coordinate system
         
         # Calculate axis limits with padding
         axis_limit = self.length + 0.5
