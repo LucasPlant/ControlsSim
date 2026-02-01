@@ -14,7 +14,7 @@ pinned: true
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A web-based dynamic systems and control simulation platform that enables users to visualize and interact with various control systems in real-time. Built with Python using the Dash framework and Plotly for interactive visualizations.
+A web-based dynamic systems and control simulation platform that enables users to visualize and interact with various control systems in real-time. Built with Python using the Dash framework and Plotly for interactive visualizations. Built mainly around the Georgia Tech ECE4550 curriculum.
 
 ## Features
 
