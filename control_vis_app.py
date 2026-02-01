@@ -5,7 +5,7 @@ from dash.dependencies import ALL
 from systems import BaseSystem, MassSpringSystem, TurtleBot, MotorizedPendulum
 from utils import make_input_field
 
-LOCAL = True
+LOCAL = False
 
 SIM_OPTIONS: dict[str, type[BaseSystem]] = {
     "Mass-Spring System": MassSpringSystem,
