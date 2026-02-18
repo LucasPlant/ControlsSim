@@ -2,7 +2,7 @@ import os
 
 from dash import Dash, html, page_container
 
-LOCAL = True
+LOCAL = False
 
 app = Dash(
     __name__,
