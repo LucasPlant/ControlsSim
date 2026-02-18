@@ -54,7 +54,7 @@ class MassSpringSystem(BaseLinearSystem):
     state_info = [
         {
             "name": "Position",
-            "value": 0.0,
+            "value": 1.0,
             "description": "Initial position of the mass (m)",
         },
         {
