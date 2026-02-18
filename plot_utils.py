@@ -3,6 +3,17 @@
 import plotly.graph_objs as go
 import numpy as np
 
+MAX_PLOT_POINTS = 1000
+
+
+def get_plot_sample_indices(num_points: int, max_points: int = MAX_PLOT_POINTS) -> np.ndarray:
+    """Return evenly spaced indices capped at max_points."""
+    if num_points <= 0:
+        return np.array([], dtype=int)
+    if num_points <= max_points:
+        return np.arange(num_points, dtype=int)
+    return np.linspace(0, num_points - 1, max_points, dtype=int)
+
 
 def multivar_plot(
     vars: np.ndarray, t: np.ndarray, state_info: list[str], title: str
@@ -17,14 +28,19 @@ def multivar_plot(
     state_info: list containing labels for the variables for the legend
     title: the title of the plot
     """
+    num_points = min(len(t), vars.shape[0])
+    sample_indices = get_plot_sample_indices(num_points)
+    t_plot = t[:num_points][sample_indices]
+    vars_plot = vars[:num_points][sample_indices]
+
     state_plot = go.Figure()
-    num_vars = vars.shape[1]
+    num_vars = vars_plot.shape[1]
     for i in range(num_vars):
         state_name = state_info[i]
         state_plot.add_trace(
             go.Scatter(
-                x=t,
-                y=vars[:, i],
+                x=t_plot,
+                y=vars_plot[:, i],
                 mode="lines",
                 name=state_name,
             )

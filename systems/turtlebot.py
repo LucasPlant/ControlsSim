@@ -1,6 +1,7 @@
 from dash import html, dcc
 import numpy as np
 import plotly.graph_objs as go
+from plot_utils import MAX_PLOT_POINTS, get_plot_sample_indices
 
 from .base_system import BaseSystem
 from controllers import (
@@ -131,11 +132,12 @@ class TurtleBot(BaseLinearSystem):
 
         # Scale factor for velocity arrows (adjust as needed)
         vel_scale = 0.5
+        trajectory_indices = get_plot_sample_indices(len(self.t), MAX_PLOT_POINTS)
 
         # Create trajectory trace (shows full path)
         trajectory = go.Scatter(
-            x=x_pos,
-            y=y_pos,
+            x=x_pos[trajectory_indices],
+            y=y_pos[trajectory_indices],
             mode="lines",
             line=dict(color="lightblue", width=2, dash="dash"),
             name="Trajectory",

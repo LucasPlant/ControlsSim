@@ -1,6 +1,7 @@
 from dash import html, dcc
 import numpy as np
 import plotly.graph_objs as go
+from plot_utils import MAX_PLOT_POINTS, get_plot_sample_indices
 
 from .base_system import BaseSystem
 from controllers import (
@@ -125,9 +126,11 @@ class MassSpringSystem(BaseLinearSystem):
         y_min = np.min(self.x[:, 0]) - 0.5
         y_max = np.max(self.x[:, 0]) + 0.5
 
+        frame_indices = get_plot_sample_indices(len(self.t), MAX_PLOT_POINTS)
+
         # Initial trace
         spring = go.Scatter(
-            x=[0, self.x[0, 0]],
+            x=[0, self.x[frame_indices[0], 0]],
             y=[0, 0],
             mode="lines+markers",
             marker=dict(size=[1, 20]),
@@ -161,7 +164,7 @@ class MassSpringSystem(BaseLinearSystem):
                     ]
                 ),
             )
-            for i in range(len(self.t))
+            for i in frame_indices
         ]
 
         fig = go.Figure(
@@ -225,7 +228,7 @@ class MassSpringSystem(BaseLinearSystem):
                                 "label": f"{self.t[i]:.2f}s",
                                 "method": "animate",
                             }
-                            for i in range(len(self.t))
+                            for i in frame_indices
                         ],
                         "active": 0,
                         "yanchor": "top",
