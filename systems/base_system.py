@@ -222,6 +222,7 @@ class BaseSystem:
         Returns:
         A div containing plots run before the simulation
         """
+        self.controller.init_system_info(self.A(), self.B(), self.C())
         figures = [
             self.mode_plot(),
             *self.controller.make_analysis_plots(self.A(), self.B(), self.C()),

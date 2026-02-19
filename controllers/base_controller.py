@@ -78,6 +78,30 @@ class BaseController:
         self.u = np.ndarray([])  # Placeholder for control input
         self.reference_trajectory = np.ndarray([])  # Placeholder for reference trajectory
 
+    def init_system_info(
+            self,
+            A: np.ndarray,
+            B: np.ndarray,
+            C: np.ndarray,
+    ):
+        """Initialize the system information for the controller. This should be called before the first step."""
+        # Validate matrix dimensions
+        state_dim = A.shape[0]
+        if A.shape[1] != state_dim:
+            raise ValueError(f"A matrix must be square, got shape {A.shape}")
+        if B.shape[0] != state_dim:
+            raise ValueError(
+                f"B matrix rows must match state dimension, got shape {B.shape}"
+            )
+        if C.shape[1] != state_dim:
+            raise ValueError(
+                f"C matrix columns must match state dimension, got shape {C.shape}"
+            )
+        
+        self.A = A
+        self.B = B
+        self.C = C
+
     def initialize(
         self,
         A: np.ndarray,
@@ -102,24 +126,10 @@ class BaseController:
             t: the time array
             state_info: list of dictionaries containing state information
         """
+        self.init_system_info(A, B, C)
+
         self.output_info = output_info
-
-        # Validate matrix dimensions
-        # TODO do really want to keep this here i feel like the validation maybe should be elsewhere
-        state_dim = A.shape[0]
-        if A.shape[1] != state_dim:
-            raise ValueError(f"A matrix must be square, got shape {A.shape}")
-        if B.shape[0] != state_dim:
-            raise ValueError(
-                f"B matrix rows must match state dimension, got shape {B.shape}"
-            )
-        if C.shape[1] != state_dim:
-            raise ValueError(
-                f"C matrix columns must match state dimension, got shape {C.shape}"
-            )
-
         input_dim = B.shape[1]
-        output_dim = C.shape[0]
 
         self.dt = dt
         self.t = t
