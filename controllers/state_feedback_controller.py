@@ -85,8 +85,8 @@ class StateFeedbackController(BaseController):
         self.L = np.array([])
         self.K1 = np.array([])
 
-    def initialize(self, A, B, C, dt, t, state_info, output_info):
-        super().initialize(A, B, C, dt, t, state_info, output_info)
+    def initialize(self, A, B, C, dt, t, state_info, output_info, linearization_point=None, linearization_control=None):
+        super().initialize(A, B, C, dt, t, state_info, output_info, linearization_point, linearization_control)
 
         integrator_info = [{"name": f"integrator_{idx}", "value": 0.0, "description": f"Integrator state {idx}"} for idx in range(len(self.output_info))] if self.feedback_type == "Integral Pole Placement" else []
         self.state_info = state_info + integrator_info
@@ -101,11 +101,6 @@ class StateFeedbackController(BaseController):
                     self.x_hat_0[idx] = float(self.initial_state[key])
                 except ValueError:
                     self.x_hat_0[idx] = 0.0  # Default to 0.0 if conversion fails
-
-        # Store the system matrices
-        self.A = A
-        self.B = B
-        self.C = C
 
         # Calculate the gain matrices based on the selected method
         self.calculate_gain_matrices()
@@ -128,25 +123,29 @@ class StateFeedbackController(BaseController):
 
     def step(self, y, index):
         x_hat = self.x_hat[index, :]
+        x_tilde = x_hat - self.x_lin
+        y_tilde = y - (self.C @ self.x_lin)
 
         if self.feedback_type == "Integral Pole Placement":
             # u = - k1 * x_hat - k2 * sigma
-            u = -1 * (self.K1 @ x_hat) + -1 * (self.K2 @ self.sigma[index, :])
+            u_tilde = -1 * (self.K1 @ x_tilde) + -1 * (self.K2 @ self.sigma[index, :])
+            u = u_tilde + self.u_lin
         else:
             # u = - k * x_hat
-            u = -1 * (self.K @ x_hat)
+            u_tilde = -1 * (self.K @ (x_tilde))
+            u = u_tilde + self.u_lin
 
         # x_hat_dot = A*x_hat + B*u - L(C*x_hat - y)
         # x_hat(index + 1) = x_hat + dt * x_hat_dot
-        x_hat_dot = (self.A @ x_hat) + (self.B @ u) - self.L @ ((self.C @ x_hat) - y)
+        x_hat_dot = (self.A @ x_tilde) + (self.B @ u_tilde) - self.L @ ((self.C @ x_tilde) - y_tilde)
+        # Note x_hat_dot is equal to x_tilde because x to x_tilde is affine
         self.x_hat[index + 1, :] = self.x_hat[index, :] + self.dt * x_hat_dot
-
-        # update the integral term sigma
-        # sigma(i+1) = sigma + dt * error
-        self.sigma[index + 1, :] = self.sigma[index, :] + self.dt * (y - self.reference_trajectory[index])
 
         # Update combined state for plotting (if using integral control)
         if self.feedback_type == "Integral Pole Placement":
+            # update the integral term sigma
+            # sigma(i+1) = sigma + dt * error
+            self.sigma[index + 1, :] = self.sigma[index, :] + self.dt * (y - self.reference_trajectory[index])
             degree = self.A.shape[0]
             self.state[index + 1, :degree] = self.x_hat[index + 1, :]
             self.state[index + 1, degree:] = self.sigma[index + 1, :]
@@ -172,17 +171,8 @@ class StateFeedbackController(BaseController):
                 self.A, self.B, self.lambda_c
             )
         elif self.feedback_type == "Integral Pole Placement":
-            # Calculate the augmented state space matrices As and Bs
-            # From A script and B script in the ECE4550 curriculum
-            self.As = np.block(
-                [
-                    [self.A, np.zeros((self.A.shape[0], self.B.shape[1]))],
-                    [self.C, np.zeros((self.C.shape[0], self.B.shape[1]))],
-                ]
-            )
-            self.Bs = np.block([[self.B], [np.zeros((self.B.shape[1], self.C.shape[0]))]])
             K = self._calculate_gain_matrices_pole_placement(
-                self.As, self.Bs, self.lambda_c
+                self.As(), self.Bs(), self.lambda_c
             )
 
             # Break out the gain matrices
@@ -213,7 +203,7 @@ class StateFeedbackController(BaseController):
             raise ValueError(
                 f"Unknown state estimator design method: {self.state_estimator_type}"
             )
-
+        
     def _calculate_gain_matrices_pole_placement(
         self, A, B, pole_position
     ) -> np.ndarray:
@@ -274,6 +264,30 @@ class StateFeedbackController(BaseController):
             eigenvalues = np.concat([controller_eigenvalues, estimator_eigenvalues])
 
         return eigenvalues
+    
+    def As(self):
+        """
+        The augmented state matrix As for integral pole placement.
+        Calculate the augmented state space matrices As and Bs
+        From A script and B script in the ECE4550 curriculum
+        """
+        return np.block(
+            [
+                [self.A, np.zeros((self.A.shape[0], self.C.shape[0]))],
+                [self.C, np.zeros((self.C.shape[0], self.C.shape[0]))],
+            ]
+        )
+    
+    def Bs(self):
+        """
+        The augmented input matrix Bs for integral pole placement.
+        Calculate the augmented state space matrices As and Bs
+        From A script and B script in the ECE4550 curriculum.
+        """
+        return np.block([
+            [self.B],
+            [np.zeros((self.C.shape[0], self.B.shape[1]))]
+        ])
 
     def controllability_field(
         self, A: np.ndarray, B: np.ndarray, C: np.ndarray
@@ -338,15 +352,10 @@ class StateFeedbackController(BaseController):
         Returns:
         A header with the return text
         """
-        commandability_matrix = np.block(
-            [
-                [A, B],
-                [C, np.zeros((C.shape[0], B.shape[1]))],
-            ]
-        )
+        controlability_matrix = control.ctrb(self.As(), self.Bs())
 
-        commandable = np.linalg.det(commandability_matrix) != 0
-
+        rank = np.linalg.matrix_rank(controlability_matrix)
+        commandable = (rank == self.As().shape[0])
         verb = "IS" if commandable else "ISNT"
 
-        return html.H3(f"System {verb} commandable")
+        return html.H3(f"System {verb} commandable with rank {rank}\n")

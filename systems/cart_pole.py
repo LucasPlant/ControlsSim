@@ -1,8 +1,9 @@
 from dash import html, dcc
 import numpy as np
 import plotly.graph_objs as go
+from plot_utils import MAX_PLOT_POINTS, get_plot_sample_indices
 
-from .base_system import BaseSystem
+from .base_manipulator_system import BaseManipulatorSystem
 from controllers import (
     BaseController,
     NoopController,
@@ -10,7 +11,7 @@ from controllers import (
     StateFeedbackController,
 )
 
-class CartPole(BaseSystem):
+class CartPole(BaseManipulatorSystem):
     """A class representing a cart-pole system. Based on problem set 8 """
 
     title = "Cart-Pole System"
@@ -23,30 +24,50 @@ class CartPole(BaseSystem):
     }
 
     system_args = {
-        "pendulum_mass": {
+        "mass_pole": {
             "type": "number",
             "value": 1.0,
             "description": "Mass of the pendulum (m)",
         },
-        "length": {
-            "type": "number",
-            "value": 10.0,
-            "description": "Length of the pendulum (L)",
-        },
-        "cart_mass": {
+        "mass_cart": {
             "type": "number",
             "value": 1.0,
             "description": "Mass of the cart (M)",
+        },
+        "length_pole": {
+            "type": "number",
+            "value": 1.0,
+            "description": "Length of the pendulum (L)",
         },
         "gravity": {
             "type": "number",
             "value": 9.8,
             "description": "Acceleration due to gravity (m/s^2)",
         },
-        "linearization_point": {
+        "linearization_point_x": {
             "type": "number",
-            "value": 0,
-            "description": "Point around which to linearize the system (radians) 0 is up π is down",
+            "value": 0.0,
+            "description": "Point around which to linearize the system (x position)",
+        },
+        "linearization_point_theta": {
+            "type": "number",
+            "value": np.pi,
+            "description": "Point around which to linearize the system (theta) 0 is up π is down",
+        },
+        "linearization_point_x_dot": {
+            "type": "number",
+            "value": 0.0,
+            "description": "Point around which to linearize the system (x velocity)",
+        },
+        "linearization_point_theta_dot": {
+            "type": "number",
+            "value": 0.0,
+            "description": "Point around which to linearize the system (theta velocity)",
+        },
+        "linearization_control_force": {
+            "type": "number",
+            "value": 0.0,
+            "description": "Control input around which to linearize the system (N*m)",
         },
     }
 
@@ -61,173 +82,240 @@ class CartPole(BaseSystem):
 
     state_info = [
         {
-            "name": "Position",
-            "value": 0,
-            "description": "Initial position of the pendulum (radians)",
+            "name": "x",
+            "value": 0.1,
+            "description": "Position of the cart (meters)",
         },
         {
-            "name": "Velocity",
+            "name": "theta",
+            "value": np.pi + 0.0001,
+            "description": "Position of the pendulum from down position (radians)",
+            # Down is 0 and up is pi
+        },
+        {
+            "name": "v",
             "value": 0.0,
-            "description": "Initial velocity of the pendulum (rad/s)",
+            "description": "Velocity of the cart (m/s)",
+        },
+        {
+            "name": "omega",
+            "value": 0.0,
+            "description": "Angular velocity of the pendulum (rad/s)",
         },
     ]
 
-    output_info = ["Angle radians (y)"]
+    output_info = ["X Position (x)", "Pendulum Angle (theta)"]
 
-    input_info = ["Torque (u)"]
+    input_info = ["Force on Cart (u)"]
 
     def __init__(
         self,
-        mass: float,
-        length: float,
+        mass_cart: float,
+        mass_pole: float,
+        length_pole: float,
         gravity: float,
-        linearization_point: float,
+        linearization_point_x: float,
+        linearization_point_theta: float,
+        linearization_control_force: float,
+        linearization_point_x_dot: float,
+        linearization_point_theta_dot: float,
         final_time: float,
         dt: float,
         controller_type: str,
-        state_0: float,  # Initial position radians
-        state_1: float,  # Initial velocity radians/s
+        state_0: float,  # Initial position meters
+        state_1: float,  # Initial position radians
+        state_2: float,  # Initial velocity of cart m/s
+        state_3: float,  # Initial angular velocity of pendulum radians/s
         controller_inputs: dict,
     ):
         """
         Initialize the mass-spring system with parameters and controller.
 
         Args:
-            mass: Mass of the system.
-            length: Length of the pendulum.
-            g: Acceleration due to gravity.
+            mass_cart: Mass of the cart.
+            mass_pole: Mass of the pendulum.
+            length_pole: Length of the pendulum.
+            gravity: Acceleration due to gravity.
+
             final_time: Total simulation time.
             dt: Time step for the simulation.
             controller_type: The name of the controller to use.
             state_0: Initial position.
-            state_1: Initial velocity.
+            state_1: Initial position radians.
+            state_2: Initial velocity of cart m/s.
+            state_3: Initial angular velocity of pendulum radians/s.
         """
-        super().__init__(dt, final_time, controller_type, controller_inputs)
-        self.mass = mass
-        self.length = length
+        linearization_point = np.array([linearization_point_x, linearization_point_theta, linearization_point_x_dot, linearization_point_theta_dot])
+        linearization_control = np.array([linearization_control_force])
+        super().__init__(dt, final_time, controller_type, controller_inputs, linearization_point, linearization_control)
+        self.mass_cart = mass_cart
+        self.mass_pole = mass_pole
+        self.length_pole = length_pole
         self.gravity = gravity
-        self.linearization_point = linearization_point
-        self.initial_state = np.array([state_0, state_1], dtype=float)
+        self.initial_state = np.array([state_0, state_1, state_2, state_3], dtype=float)
 
-    def f(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
-        theta = x[0]
-        theta_dot = x[1]
-        u = u[0]  # Torque input
+    def M_manip(self, q: np.ndarray) -> np.ndarray:
+        """The mass matrix M(q) of the system."""
+        m_c = self.mass_cart
+        m_p = self.mass_pole
+        l = self.length_pole
+        theta = q[1]
 
-        # theta = 0 is now upward position, so we use sin(theta + π) = -sin(theta)
-        theta_double_dot = (1/(self.mass * self.length**2) * u + 
-                            (self.gravity / self.length) * np.sin(theta))
-        
-        return np.array([theta_dot, theta_double_dot])
+        M11 = m_c + m_p
+        M12 = m_p * l * np.cos(theta)
+        M21 = M12
+        M22 = m_p * (l ** 2)
 
-    def g(self, x: np.ndarray) -> np.ndarray:
-        return np.array([x[0]])
+        return np.array([[M11, M12], [M21, M22]])
+    
+    def C_manip(self, q: np.ndarray, qdot: np.ndarray) -> np.ndarray:
+        """The Coriolis matrix C(q, qdot) of the system."""
+        m_p = self.mass_pole
+        l = self.length_pole
+        theta = q[1]
+        theta_dot = qdot[1]
 
-    def A(self) -> np.ndarray:
-        linearization_point = np.array([self.linearization_point, 0])
-        # With theta = 0 as upward, we use cos(theta + π) = -cos(theta) for linearization
-        return np.array(
-            [
-                [0, 1],
-                [
-                    (self.gravity / self.length) * np.cos(linearization_point[0]),
-                    0
-                ],
-            ]
-        )
+        C11 = 0
+        C12 = -m_p * l * theta_dot * np.sin(theta)
+        C21 = 0
+        C22 = 0
 
-    def B(self) -> np.ndarray:
-        return np.array([[0], [1 / (self.mass * self.length**2)]])
+        return np.array([[C11, C12], [C21, C22]])
+    
+    def B_manip(self, q: np.ndarray) -> np.ndarray:
+        """The input matrix B(q) of the system."""
+        return np.array([[1], [0]])
+    
+    def tau(self, q: np.ndarray) -> np.ndarray:
+        """The gravity term tau(q) of the system."""
+        m_p = self.mass_pole
+        l = self.length_pole
+        g = self.gravity
+        theta = q[1]
 
-    def C(self) -> np.ndarray:
-        return np.array([[1, 0]])
+        tau_1 = 0
+        tau_2 = -m_p * g * l * np.sin(theta)
+
+        return np.array([tau_1, tau_2])
+    
+    def d_tau_dq(self, q: np.ndarray) -> np.ndarray:
+        """The derivative of tau(q) with respect to q."""
+        m_p = self.mass_pole
+        l = self.length_pole
+        g = self.gravity
+        theta = q[1]
+
+        d_tau_1_dq1 = 0
+        d_tau_1_dq2 = 0
+        d_tau_2_dq1 = 0
+        d_tau_2_dq2 = m_p * g * l
+
+        return np.array([[d_tau_1_dq1, d_tau_1_dq2], [d_tau_2_dq1, d_tau_2_dq2]])
+    
+    def d_Bj_dq(self, q: np.ndarray) -> np.ndarray:
+        """The derivative of B(q) with respect to q."""
+        return np.zeros((2, 1))
 
     def make_animation(self) -> go.Figure:
         """
-        Create an animation of the motorized pendulum showing position and velocity
+        Create an animation of the cart-pole system.
         """
-        # Extract angles and angular velocities
-        theta = self.x[:, 0]  # Angle in radians
-        theta_dot = self.x[:, 1]  # Angular velocity in rad/s
-        
-        # Convert to Cartesian coordinates for pendulum bob
-        x_pos = self.length * np.sin(theta)
-        y_pos = self.length * np.cos(theta)  # Positive y is upward, theta=0 is up
-        
-        # Calculate velocity components (tangential to pendulum path)
-        x_vel = self.length * theta_dot * np.cos(theta)
-        y_vel = -self.length * theta_dot * np.sin(theta)  # Adjusted for new coordinate system
-        
-        # Calculate axis limits with padding
-        axis_limit = self.length + 0.5
-        
-        # Scale factor for velocity arrows
-        vel_scale = 0.3
-        
-        # Create pendulum rod (from pivot to bob) - initial position
-        pendulum_rod = go.Scatter(
-            x=[0, x_pos[0]],
-            y=[0, y_pos[0]],
-            mode="lines+markers",
-            marker=dict(size=[8, 20], color=["black", "red"], 
-                       symbol=["circle", "circle"]),
-            line=dict(width=4, color="black"),
-            name="Pendulum",
+        cart_x = self.x[:, 0]
+        theta = self.x[:, 1]
+        cart_v = self.x[:, 2]
+        theta_dot = self.x[:, 3]
+
+        # Render convention: theta = 0 is down, theta = pi is up.
+        pole_tip_x = cart_x + self.length_pole * np.sin(theta)
+
+        cart_half_width = 0.25
+        cart_height = 0.2
+        cart_base_y = -cart_height / 2
+        cart_top_y = cart_base_y + cart_height
+        pole_tip_y = cart_top_y - self.length_pole * np.cos(theta)
+
+        x_min = min(np.min(cart_x - cart_half_width), np.min(pole_tip_x)) - 0.5
+        x_max = max(np.max(cart_x + cart_half_width), np.max(pole_tip_x)) + 0.5
+        y_min = min(cart_base_y, np.min(pole_tip_y)) - 0.3
+        y_max = max(cart_top_y, np.max(pole_tip_y)) + 0.3
+
+        frame_indices = get_plot_sample_indices(len(self.t), MAX_PLOT_POINTS)
+
+        track = go.Scatter(
+            x=[x_min, x_max],
+            y=[cart_base_y, cart_base_y],
+            mode="lines",
+            line=dict(color="gray", width=3),
+            name="Track",
         )
-        
-        # Initial velocity arrow
-        vel_magnitude = np.abs(theta_dot[0])
-        if vel_magnitude > 0.01:  # Only show arrow if moving significantly
-            vel_arrow = go.Scatter(
-                x=[x_pos[0], x_pos[0] + x_vel[0] * vel_scale],
-                y=[y_pos[0], y_pos[0] + y_vel[0] * vel_scale],
-                mode="lines+markers",
-                line=dict(color="green", width=3),
-                marker=dict(size=[0, 8], color="green", symbol=["circle", "triangle-up"]),
-                name="Velocity",
-            )
-        else:
-            vel_arrow = go.Scatter(
-                x=[x_pos[0]], y=[y_pos[0]],
-                mode="markers", marker=dict(size=0, color="green"),
-                name="Velocity",
-            )
 
-        # Create frames for animation
+        initial_idx = frame_indices[0]
+        cart_box = go.Scatter(
+            x=[
+                cart_x[initial_idx] - cart_half_width,
+                cart_x[initial_idx] + cart_half_width,
+                cart_x[initial_idx] + cart_half_width,
+                cart_x[initial_idx] - cart_half_width,
+                cart_x[initial_idx] - cart_half_width,
+            ],
+            y=[cart_base_y, cart_base_y, cart_top_y, cart_top_y, cart_base_y],
+            mode="lines",
+            fill="toself",
+            line=dict(color="royalblue", width=2),
+            fillcolor="rgba(65, 105, 225, 0.35)",
+            name="Cart",
+        )
+
+        pole = go.Scatter(
+            x=[cart_x[initial_idx], pole_tip_x[initial_idx]],
+            y=[cart_top_y, pole_tip_y[initial_idx]],
+            mode="lines",
+            line=dict(color="black", width=4),
+            name="Pole",
+        )
+
+        bob = go.Scatter(
+            x=[pole_tip_x[initial_idx]],
+            y=[pole_tip_y[initial_idx]],
+            mode="markers",
+            marker=dict(size=14, color="crimson"),
+            name="Pole Tip",
+        )
+
         frames = []
-        for i in range(0, len(self.t), max(1, len(self.t) // 200)):  # Limit frames for performance
-            # Pendulum rod for this frame
-            pendulum_frame = go.Scatter(
-                x=[0, x_pos[i]],
-                y=[0, y_pos[i]],
-                mode="lines+markers",
-                marker=dict(size=[8, 20], color=["black", "red"], 
-                           symbol=["circle", "circle"]),
-                line=dict(width=4, color="black"),
-                name="Pendulum",
+        for i in frame_indices:
+            frame_cart = go.Scatter(
+                x=[
+                    cart_x[i] - cart_half_width,
+                    cart_x[i] + cart_half_width,
+                    cart_x[i] + cart_half_width,
+                    cart_x[i] - cart_half_width,
+                    cart_x[i] - cart_half_width,
+                ],
+                y=[cart_base_y, cart_base_y, cart_top_y, cart_top_y, cart_base_y],
+                mode="lines",
+                fill="toself",
+                line=dict(color="royalblue", width=2),
+                fillcolor="rgba(65, 105, 225, 0.35)",
+                name="Cart",
             )
-            
-            # Velocity arrow for this frame
-            vel_magnitude = np.abs(theta_dot[i])
-            if vel_magnitude > 0.01:  # Only show arrow if moving significantly
-                vel_arrow_frame = go.Scatter(
-                    x=[x_pos[i], x_pos[i] + x_vel[i] * vel_scale],
-                    y=[y_pos[i], y_pos[i] + y_vel[i] * vel_scale],
-                    mode="lines+markers",
-                    line=dict(color="green", width=3),
-                    marker=dict(size=[0, 8], color="green", symbol=["circle", "triangle-up"]),
-                    name="Velocity",
-                )
-            else:
-                vel_arrow_frame = go.Scatter(
-                    x=[x_pos[i]], y=[y_pos[i]],
-                    mode="markers", marker=dict(size=0, color="green"),
-                    name="Velocity",
-                )
-
+            frame_pole = go.Scatter(
+                x=[cart_x[i], pole_tip_x[i]],
+                y=[cart_top_y, pole_tip_y[i]],
+                mode="lines",
+                line=dict(color="black", width=4),
+                name="Pole",
+            )
+            frame_bob = go.Scatter(
+                x=[pole_tip_x[i]],
+                y=[pole_tip_y[i]],
+                mode="markers",
+                marker=dict(size=14, color="crimson"),
+                name="Pole Tip",
+            )
             frames.append(
                 go.Frame(
-                    data=[pendulum_frame, vel_arrow_frame],
+                    data=[track, frame_cart, frame_pole, frame_bob],
                     name=str(i),
                     layout=go.Layout(
                         annotations=[
@@ -236,7 +324,13 @@ class CartPole(BaseSystem):
                                 y=0.98,
                                 xref="paper",
                                 yref="paper",
-                                text=f"Time: {self.t[i]:.2f}s<br>Angle: {theta[i]:.2f} rad<br>ω: {theta_dot[i]:.2f} rad/s",
+                                text=(
+                                    f"Time: {self.t[i]:.2f}s<br>"
+                                    f"x: {cart_x[i]:.2f} m<br>"
+                                    f"theta: {theta[i]:.2f} rad<br>"
+                                    f"v: {cart_v[i]:.2f} m/s<br>"
+                                    f"omega: {theta_dot[i]:.2f} rad/s"
+                                ),
                                 showarrow=False,
                                 font=dict(size=12),
                                 bgcolor="rgba(255,255,255,0.8)",
@@ -250,19 +344,11 @@ class CartPole(BaseSystem):
             )
 
         fig = go.Figure(
-            data=[pendulum_rod, vel_arrow],
+            data=[track, cart_box, pole, bob],
             layout=go.Layout(
-                title="Motorized Pendulum Animation",
-                xaxis=dict(
-                    range=[-axis_limit, axis_limit],
-                    title="X Position (m)",
-                    scaleanchor="y",
-                    scaleratio=1,
-                ),
-                yaxis=dict(
-                    range=[-axis_limit, axis_limit],
-                    title="Y Position (m)",
-                ),
+                title="Cart-Pole Animation",
+                xaxis=dict(range=[x_min, x_max], title="X Position (m)"),
+                yaxis=dict(range=[y_min, y_max], title="Y Position (m)"),
                 showlegend=True,
                 legend=dict(x=0.02, y=0.02),
                 updatemenus=[
@@ -316,7 +402,7 @@ class CartPole(BaseSystem):
                                 "label": f"{self.t[i]:.1f}s",
                                 "method": "animate",
                             }
-                            for i in range(0, len(self.t), max(1, len(self.t) // 200))
+                            for i in frame_indices
                         ],
                         "active": 0,
                         "yanchor": "top",
@@ -331,4 +417,5 @@ class CartPole(BaseSystem):
             ),
             frames=frames,
         )
+
         return fig

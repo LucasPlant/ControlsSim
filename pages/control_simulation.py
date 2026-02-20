@@ -2,12 +2,13 @@ import dash
 from dash import Input, Output, State, callback, dcc, html, register_page
 from dash.dependencies import ALL
 
-from systems import BaseSystem, MassSpringSystem, MotorizedPendulum, TurtleBot
+from systems import BaseSystem, MassSpringSystem, MotorizedPendulum, TurtleBot, CartPole
 from utils import make_input_field
 
 register_page(__name__, path="/control-simulation", name="Control Simulation")
 
 SIM_OPTIONS: dict[str, type[BaseSystem]] = {
+    "Cart-Pole": CartPole,
     "Mass-Spring System": MassSpringSystem,
     "TurtleBot": TurtleBot,
     "Motorized Pendulum": MotorizedPendulum,

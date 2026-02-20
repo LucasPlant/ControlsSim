@@ -42,8 +42,8 @@ class PIDController(BaseController):
         self.Ki = Ki
         self.Kd = Kd
 
-    def initialize(self, A, B, C, dt, t, state_info, output_info):
-        super().initialize(A, B, C, dt, t, state_info, output_info)
+    def initialize(self, A, B, C, dt, t, state_info, output_info, linearization_point=None, linearization_control=None):
+        super().initialize(A, B, C, dt, t, state_info, output_info, linearization_point, linearization_control)
 
         self.integral = 0.0
         self.prev_error = 0.0
