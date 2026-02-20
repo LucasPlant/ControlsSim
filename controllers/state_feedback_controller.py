@@ -85,8 +85,8 @@ class StateFeedbackController(BaseController):
         self.L = np.array([])
         self.K1 = np.array([])
 
-    def initialize(self, A, B, C, dt, t, state_info, output_info):
-        super().initialize(A, B, C, dt, t, state_info, output_info)
+    def initialize(self, A, B, C, dt, t, state_info, output_info, linearization_point=None, linearization_control=None):
+        super().initialize(A, B, C, dt, t, state_info, output_info, linearization_point, linearization_control)
 
         integrator_info = [{"name": f"integrator_{idx}", "value": 0.0, "description": f"Integrator state {idx}"} for idx in range(len(self.output_info))] if self.feedback_type == "Integral Pole Placement" else []
         self.state_info = state_info + integrator_info
@@ -123,17 +123,22 @@ class StateFeedbackController(BaseController):
 
     def step(self, y, index):
         x_hat = self.x_hat[index, :]
+        x_tilde = x_hat - self.x_lin
+        y_tilde = y - (self.C @ self.x_lin)
 
         if self.feedback_type == "Integral Pole Placement":
             # u = - k1 * x_hat - k2 * sigma
-            u = -1 * (self.K1 @ x_hat) + -1 * (self.K2 @ self.sigma[index, :])
+            u_tilde = -1 * (self.K1 @ x_tilde) + -1 * (self.K2 @ self.sigma[index, :])
+            u = u_tilde + self.u_lin
         else:
             # u = - k * x_hat
-            u = -1 * (self.K @ x_hat)
+            u_tilde = -1 * (self.K @ (x_tilde))
+            u = u_tilde + self.u_lin
 
         # x_hat_dot = A*x_hat + B*u - L(C*x_hat - y)
         # x_hat(index + 1) = x_hat + dt * x_hat_dot
-        x_hat_dot = (self.A @ x_hat) + (self.B @ u) - self.L @ ((self.C @ x_hat) - y)
+        x_hat_dot = (self.A @ x_tilde) + (self.B @ u_tilde) - self.L @ ((self.C @ x_tilde) - y_tilde)
+        # Note x_hat_dot is equal to x_tilde because x to x_tilde is affine
         self.x_hat[index + 1, :] = self.x_hat[index, :] + self.dt * x_hat_dot
 
         # Update combined state for plotting (if using integral control)
@@ -199,8 +204,6 @@ class StateFeedbackController(BaseController):
                 f"Unknown state estimator design method: {self.state_estimator_type}"
             )
         
-        print(f"Calculated gain matrices K: {self.K}, L: {self.L}")
-
     def _calculate_gain_matrices_pole_placement(
         self, A, B, pole_position
     ) -> np.ndarray:

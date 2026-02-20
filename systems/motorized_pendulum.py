@@ -40,8 +40,8 @@ class MotorizedPendulum(BaseSystem):
         },
         "linearization_point": {
             "type": "number",
-            "value": 0,
-            "description": "Point around which to linearize the system (radians) 0 is up π is down",
+            "value": np.pi,
+            "description": "Point around which to linearize the system (radians) 0 is down pi is up",
         },
     }
 
@@ -101,7 +101,9 @@ class MotorizedPendulum(BaseSystem):
         self.mass = mass
         self.length = length
         self.gravity = gravity
-        self.linearization_point = linearization_point
+        # Linearize around full state [theta, theta_dot] and input [u].
+        self.linearization_point = [linearization_point, 0.0]
+        self.linearization_control = [0.0]
         self.initial_state = np.array([state_0, state_1], dtype=float)
 
     def f(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
@@ -109,9 +111,11 @@ class MotorizedPendulum(BaseSystem):
         theta_dot = x[1]
         u = u[0]  # Torque input
 
-        # theta = 0 is now upward position, so we use sin(theta + π) = -sin(theta)
-        theta_double_dot = (1/(self.mass * self.length**2) * u + 
-                            (self.gravity / self.length) * np.sin(theta))
+        # Convention: theta = 0 is down, theta = pi is up.
+        theta_double_dot = (
+            (1 / (self.mass * self.length**2)) * u
+            - (self.gravity / self.length) * np.sin(theta)
+        )
         
         return np.array([theta_dot, theta_double_dot])
 
@@ -119,13 +123,12 @@ class MotorizedPendulum(BaseSystem):
         return np.array([x[0]])
 
     def A(self) -> np.ndarray:
-        linearization_point = np.array([self.linearization_point, 0])
-        # With theta = 0 as upward, we use cos(theta + π) = -cos(theta) for linearization
+        theta_lin = self.linearization_point[0]
         return np.array(
             [
                 [0, 1],
                 [
-                    (self.gravity / self.length) * np.cos(linearization_point[0]),
+                    -(self.gravity / self.length) * np.cos(theta_lin),
                     0
                 ],
             ]
@@ -147,11 +150,11 @@ class MotorizedPendulum(BaseSystem):
         
         # Convert to Cartesian coordinates for pendulum bob
         x_pos = self.length * np.sin(theta)
-        y_pos = self.length * np.cos(theta)  # Positive y is upward, theta=0 is up
+        y_pos = -self.length * np.cos(theta)  # Positive y is upward, theta=0 is down
         
         # Calculate velocity components (tangential to pendulum path)
         x_vel = self.length * theta_dot * np.cos(theta)
-        y_vel = -self.length * theta_dot * np.sin(theta)  # Adjusted for new coordinate system
+        y_vel = self.length * theta_dot * np.sin(theta)
         
         # Calculate axis limits with padding
         axis_limit = self.length + 0.5

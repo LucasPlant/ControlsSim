@@ -82,6 +82,8 @@ class BaseSystem:
         final_time: float,
         controller_type: str,
         controller_inputs: dict,
+        linearization_point: np.ndarray|None = None,
+        linearization_control: np.ndarray|None = None,
     ):
         """
         Initialize the system with a controller and simulation parameters.
@@ -100,6 +102,9 @@ class BaseSystem:
         # Initialize controller
         controller_class = self.allowed_controllers[controller_type]
         self.controller = controller_class(**controller_inputs)
+
+        self.linearization_point = linearization_point
+        self.linearization_control = linearization_control
 
     def f(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
         """
@@ -153,7 +158,6 @@ class BaseSystem:
         self.x[0, :] = self.initial_state
 
         # Get input/output dimensions from B and C matrices
-        # TODO instead have the system creator make these for the potential for nonlinear control ect
         input_dim = self.B().shape[1]
         output_dim = self.C().shape[0]
 
@@ -163,7 +167,7 @@ class BaseSystem:
         self.y[0, :] = self.g(self.x[0, :])
 
         self.controller.initialize(
-            self.A(), self.B(), self.C(), self.dt, self.t, self.state_info, self.output_info
+            self.A(), self.B(), self.C(), self.dt, self.t, self.state_info, self.output_info, self.linearization_point, self.linearization_control
         )
 
         self.runge_kutta_4th_order()

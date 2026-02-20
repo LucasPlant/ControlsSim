@@ -111,6 +111,8 @@ class BaseController:
         t: np.ndarray,
         state_info: list[dict[str, str]],
         output_info: list[dict[str, str]],
+        linearization_point: np.ndarray|None = None,
+        linearization_control: np.ndarray|None = None,
     ):
         """
         Initialize the controller and set a time step.
@@ -125,6 +127,9 @@ class BaseController:
             dt: the controller timestep
             t: the time array
             state_info: list of dictionaries containing state information
+            output_info: list of dictionaries containing output information
+            linearization_point: the point around which the system is linearized (for linear controllers)
+            linearization_control: the control input at the linearization point (for linear controllers)
         """
         self.init_system_info(A, B, C)
 
@@ -135,6 +140,16 @@ class BaseController:
         self.t = t
         # Initialize control input array with proper dimensions
         self.u = np.zeros((len(self.t), input_dim))
+
+        if linearization_point is not None:
+            self.x_lin = linearization_point
+        else:
+            self.x_lin = np.zeros(A.shape[0])
+
+        if linearization_control is not None:
+            self.u_lin = linearization_control
+        else:
+             self.u_lin = np.zeros(B.shape[1])
 
         # initialize the reference trajectory
         self.reference_trajectory = self.trajectory_generator.generate(

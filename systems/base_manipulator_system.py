@@ -42,9 +42,6 @@ class BaseManipulatorSystem(BaseSystem):
         B_manip = self.B_manip(q)
         tau = self.tau(q)
 
-        print(M_manip)
-        print(np.linalg.inv(M_manip))
-
         q_ddot = np.linalg.inv(M_manip) @ (tau + B_manip @ u - C_manip @ qdot)
         return np.concatenate((qdot, q_ddot))
     
