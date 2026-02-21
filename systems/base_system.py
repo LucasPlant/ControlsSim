@@ -14,6 +14,7 @@ class BaseSystem:
     title = None
 
     system_args = {}
+    linearization_args = {}
 
     simulation_args = {}
 
@@ -26,6 +27,14 @@ class BaseSystem:
     # Dictionary mapping controller names to controller classes that are compatible with this system
     allowed_controllers: dict[str, type[BaseController]] = {}
 
+    @staticmethod
+    def _collapsible_section(title: str, children: list, is_open: bool = False) -> html.Details:
+        return html.Details(
+            [html.Summary(title, className="menu-summary"), html.Div(children, className="menu-content")],
+            open=is_open,
+            className="menu-group",
+        )
+
     @classmethod
     def make_layout(cls, system_args: dict, controller_inputs: dict) -> html.Div:
         """Generate the layout for the system's input fields based on the cls.system_args variable.
@@ -34,45 +43,68 @@ class BaseSystem:
         A div containing the layout for the systems input fields
         """
 
+        system_parameters = [
+            make_input_field(name, props, "system", system_args)
+            for name, props in cls.system_args.items()
+        ]
+        linearization_parameters = [
+            make_input_field(name, props, "system", system_args)
+            for name, props in cls.linearization_args.items()
+        ]
+        simulator_parameters = [
+            make_input_field(name, props, "system", system_args)
+            for name, props in cls.simulation_args.items()
+        ]
+        initial_condition_parameters = [
+            field
+            for idx, props in enumerate(cls.state_info)
+            for field in make_state_input_field(f"state_{idx}", props, "system", system_args)
+        ]
+
         return html.Div(
             [
                 html.H1(cls.title),
-                # System Inputs
-                html.H2("System Inputs"),
-                html.Div([
-                    make_input_field(name, props, "system", system_args)
-                    for name, props in cls.system_args.items()
-                ]),
-                html.H2("Simulation Inputs"),
-                html.Div([
-                    make_input_field(name, props, "system", system_args)
-                    for name, props in cls.simulation_args.items()
-                ]),
-                html.H2("State Initialization"),
-                html.Div([
-                    field
-                    for idx, props in enumerate(cls.state_info)
-                    for field in make_state_input_field(f"state_{idx}", props, "system", system_args)
-                ]),
-                # Controller Selection
-                html.H2("Select Controller"),
-                make_input_field(
-                    "controller_type",
-                    {
-                        "type": "dropdown",
-                        "value": (
-                            list(cls.allowed_controllers.keys())[0]
-                            if cls.allowed_controllers
-                            else None
+                cls._collapsible_section(
+                    "System",
+                    [
+                        cls._collapsible_section(
+                            "System Parameters",
+                            system_parameters if system_parameters else [html.P("No system parameters for this model.")],
+                            is_open=True,
                         ),
-                        "description": "Controller type",
-                        "options": list(cls.allowed_controllers.keys()),
-                    },
-                    "system",
-                    controller_inputs,
+                        cls._collapsible_section(
+                            "System Linearization",
+                            linearization_parameters
+                            if linearization_parameters
+                            else [html.P("No linearization parameters for this model.")],
+                        ),
+                        cls._collapsible_section("Simulator", simulator_parameters),
+                        cls._collapsible_section("Initial Conditions", initial_condition_parameters),
+                    ],
+                    is_open=True,
                 ),
-                # Container for controller-specific inputs - this will be populated by callback
-                html.Div(id={"type": "controller-inputs", "system": cls.__name__}),
+                cls._collapsible_section(
+                    "Controller",
+                    [
+                        make_input_field(
+                            "controller_type",
+                            {
+                                "type": "dropdown",
+                                "value": (
+                                    list(cls.allowed_controllers.keys())[0]
+                                    if cls.allowed_controllers
+                                    else None
+                                ),
+                                "description": "Controller type",
+                                "options": list(cls.allowed_controllers.keys()),
+                            },
+                            "system",
+                            controller_inputs,
+                        ),
+                        html.Div(id={"type": "controller-inputs", "system": cls.__name__}),
+                    ],
+                    is_open=True,
+                ),
             ]
         )
 

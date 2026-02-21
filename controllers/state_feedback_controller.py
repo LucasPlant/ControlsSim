@@ -49,13 +49,15 @@ class StateFeedbackController(BaseController):
     @classmethod
     def make_state_initialization_field(cls, controller_inputs: dict, input_info: list, output_info: list, state_info: list) -> html.Div:
         # Create input fields for each state variable to initialize estimated states
+        existing_state_values = controller_inputs.get("initial_state", {})
         return html.Div(
             [
-                html.H3("State Estimator Initialization"),
                 *[
                     field
                     for idx, props in enumerate(state_info)
-                    for field in make_state_input_field(f"state_{idx}", props, "controller-state")
+                    for field in make_state_input_field(
+                        f"state_{idx}", props, "controller-state", existing_state_values
+                    )
                 ]
             ]
         )

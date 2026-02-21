@@ -14,6 +14,16 @@ SIM_OPTIONS: dict[str, type[BaseSystem]] = {
     "Motorized Pendulum": MotorizedPendulum,
 }
 
+
+def _collect_source_values(values, ids, source: str) -> dict:
+    """Collect current UI values for a specific source from pattern-matching callback state."""
+    collected = {}
+    for value, id_ in zip(values or [], ids or []):
+        if id_.get("source") == source:
+            collected[id_["name"]] = value
+    return collected
+
+
 layout = html.Main(
     [
         html.Div(
@@ -69,9 +79,11 @@ def render_system_args(system_key):
     Output({"type": "controller-inputs", "system": ALL}, "children"),
     Input({"type": "input", "source": "system", "name": "controller_type"}, "value"),
     State("system-selector", "value"),
+    State({"type": "input", "source": ALL, "name": ALL}, "value"),
+    State({"type": "input", "source": ALL, "name": ALL}, "id"),
     State("system-input-store", "data"),
 )
-def render_controller_inputs(controller_type, system_key, inputs):
+def render_controller_inputs(controller_type, system_key, all_values, all_ids, inputs):
     if not controller_type or not system_key:
         return [html.Div()]
 
@@ -84,8 +96,14 @@ def render_controller_inputs(controller_type, system_key, inputs):
     if not controller_class:
         return [html.Div()]
 
-    controller_inputs = {}
-    if inputs and "controller" in inputs:
+    controller_inputs = _collect_source_values(all_values, all_ids, "controller")
+    initial_controller_state = _collect_source_values(all_values, all_ids, "controller-state")
+    if initial_controller_state:
+        controller_inputs["initial_state"] = initial_controller_state
+    elif inputs and "controller" in inputs and "initial_state" in inputs["controller"]:
+        controller_inputs["initial_state"] = inputs["controller"]["initial_state"]
+
+    if not controller_inputs and inputs and "controller" in inputs:
         controller_inputs = inputs["controller"]
 
     return [
@@ -107,9 +125,13 @@ def render_controller_inputs(controller_type, system_key, inputs):
     ),
     State({"type": "input", "source": "system", "name": "controller_type"}, "value"),
     State("system-selector", "value"),
+    State({"type": "input", "source": ALL, "name": ALL}, "value"),
+    State({"type": "input", "source": ALL, "name": ALL}, "id"),
     State("system-input-store", "data"),
 )
-def render_trajectory_inputs(trajectory_generator_type, controller_type, system_key, inputs):
+def render_trajectory_inputs(
+    trajectory_generator_type, controller_type, system_key, all_values, all_ids, inputs
+):
     if not trajectory_generator_type or not controller_type or not system_key:
         return [html.Div()]
 
@@ -128,9 +150,10 @@ def render_trajectory_inputs(trajectory_generator_type, controller_type, system_
     if not trajectory_generator:
         return [html.Div()]
 
-    trajectory_inputs = {}
+    trajectory_inputs = _collect_source_values(all_values, all_ids, "trajectory_generator")
     if (
-        inputs
+        not trajectory_inputs
+        and inputs
         and "controller" in inputs
         and "trajectory_generator_inputs" in inputs["controller"]
     ):
@@ -144,7 +167,6 @@ def render_trajectory_inputs(trajectory_generator_type, controller_type, system_
     return [
         html.Div(
             [
-                html.H4("Trajectory Generation Parameters"),
                 *trajectory_inputs_fields,
             ]
         )

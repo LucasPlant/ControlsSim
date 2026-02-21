@@ -44,6 +44,9 @@ class CartPole(BaseManipulatorSystem):
             "value": 9.8,
             "description": "Acceleration due to gravity (m/s^2)",
         },
+    }
+
+    linearization_args = {
         "linearization_point_x": {
             "type": "number",
             "value": 0.0,
@@ -83,12 +86,12 @@ class CartPole(BaseManipulatorSystem):
     state_info = [
         {
             "name": "x",
-            "value": 0.1,
+            "value": 0.2,
             "description": "Position of the cart (meters)",
         },
         {
             "name": "theta",
-            "value": np.pi + 0.0001,
+            "value": np.pi + 0.3,
             "description": "Position of the pendulum from down position (radians)",
             # Down is 0 and up is pi
         },

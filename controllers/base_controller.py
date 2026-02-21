@@ -26,6 +26,14 @@ class BaseController:
         "Sinusoidal": SinusoidalTrajectoryGenerator,
     }  # dict of trajectory generator name to class
 
+    @staticmethod
+    def _collapsible_section(title: str, children: list, is_open: bool = False) -> html.Details:
+        return html.Details(
+            [html.Summary(title, className="menu-summary"), html.Div(children, className="menu-content")],
+            open=is_open,
+            className="menu-group nested-menu",
+        )
+
     @classmethod
     def make_state_initialization_field(cls, controller_inputs: dict, input_info: list, output_info: list, state_info: list) -> html.Div:
         """Generate the layout for a state initialization field.
@@ -54,14 +62,33 @@ class BaseController:
             controller_inputs
         )
 
+        estimator_init_fields = cls.make_state_initialization_field(
+            controller_inputs, input_info, output_info, state_info
+        )
+        has_estimator_fields = bool(getattr(estimator_init_fields, "children", []))
+
         return html.Div(
             [
-                html.H2(f"{cls.title} Inputs"),
-                *controller_fields,
-                cls.make_state_initialization_field(controller_inputs, input_info, output_info, state_info),
-                html.H3("Trajectory Generation"),
-                trajectory_generator_field,
-                html.Div(id={"type": "trajectory-inputs", "controller": cls.title})
+                html.H3(cls.title),
+                cls._collapsible_section(
+                    "Controller Parameters",
+                    controller_fields if controller_fields else [html.P("No controller parameters for this controller.")],
+                    is_open=True,
+                ),
+                cls._collapsible_section(
+                    "Estimator Initialization",
+                    [estimator_init_fields]
+                    if has_estimator_fields
+                    else [html.P("No estimator initialization required for this controller.")],
+                ),
+                cls._collapsible_section(
+                    "Trajectory Generation",
+                    [
+                        trajectory_generator_field,
+                        html.Div(id={"type": "trajectory-inputs", "controller": cls.title}),
+                    ],
+                    is_open=True,
+                ),
             ]
         )
 

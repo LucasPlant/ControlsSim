@@ -38,6 +38,9 @@ class MotorizedPendulum(BaseSystem):
             "value": 9.8,
             "description": "Acceleration due to gravity (m/s^2)",
         },
+    }
+
+    linearization_args = {
         "linearization_point": {
             "type": "number",
             "value": np.pi,

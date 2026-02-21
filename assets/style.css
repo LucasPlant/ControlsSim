@@ -191,6 +191,59 @@ h4 {
   margin-bottom: 14px;
 }
 
+.menu-group {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fbff;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.menu-group .menu-group {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.menu-summary {
+  cursor: pointer;
+  padding: 11px 14px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.98rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+.menu-group[open] > .menu-summary {
+  background: #eef6ff;
+  border-bottom: 1px solid var(--border);
+}
+
+.menu-content {
+  padding: 12px 14px 14px;
+}
+
+.menu-content > div + div,
+.menu-content > label + input,
+.menu-content > p + div {
+  margin-top: 10px;
+}
+
+.menu-content p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.menu-content label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.menu-content input {
+  width: 100%;
+}
+
 .results-wrap {
   margin-top: 18px;
   background: var(--surface);
