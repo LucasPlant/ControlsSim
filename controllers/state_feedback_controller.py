@@ -17,7 +17,7 @@ class StateFeedbackController(BaseController):
     controller_inputs = {
         "feedback_type": {
             "type": "dropdown",
-            "value": "Integral Pole Placement",
+            "value": "Pole Placement",
             "description": "Controller design method",
             "options": [
                 "Pole Placement",
@@ -36,12 +36,12 @@ class StateFeedbackController(BaseController):
         },
         "lambda_e": {
             "type": "number",
-            "value": -1.0,
+            "value": -5.0,
             "description": "Estimator eigenvalue (lambda_e)",
         },
         "lambda_c": {
             "type": "number",
-            "value": -1.0,
+            "value": -5.0,
             "description": "Controller eigenvalue (lambda_c)",
         },
     }

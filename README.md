@@ -58,10 +58,7 @@ Contributions are welcome! If you'd like to contribute please reach out to me
 ## Roadmap
 
 ### High Priority
-- [ ] Fix the weird behavior where the inputs dont set properly
-- [ ] Colapsable menues / UI improvements
 - [ ] check boxes for integral control
-- [ ] Scale lines separately on the same graph separate axes
 - [ ] lqr for gain calculations (estimator and controller)
 - [ ] More underactuated robotics plants
 - [ ] Low frequency zero analysis and cancellation

@@ -34,23 +34,100 @@ def multivar_plot(
     vars_plot = vars[:num_points][sample_indices]
 
     state_plot = go.Figure()
+    plot_colors = [
+        "#636EFA",
+        "#EF553B",
+        "#00CC96",
+        "#AB63FA",
+        "#FFA15A",
+        "#19D3F3",
+        "#FF6692",
+        "#B6E880",
+    ]
     num_vars = vars_plot.shape[1]
     for i in range(num_vars):
         state_name = state_info[i]
+        axis_name = "y" if i == 0 else f"y{i + 1}"
         state_plot.add_trace(
             go.Scatter(
                 x=t_plot,
                 y=vars_plot[:, i],
                 mode="lines",
                 name=state_name,
+                yaxis=axis_name,
+                line={"color": plot_colors[i % len(plot_colors)]},
             )
         )
-    state_plot.update_layout(
-        title=title,
-        xaxis_title="Time (s)",
-        yaxis_title="Var Value",
-        legend_title="Variables",
-    )
+
+    layout_update = {
+        "title": title,
+        "xaxis_title": "Time (s)",
+        "legend_title": "Variables",
+        "legend": {
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0.0,
+        },
+        "yaxis": {
+            "showline": True,
+            "linecolor": plot_colors[0],
+            "tickfont": {"color": plot_colors[0]},
+            "zeroline": False,
+            "nticks": 5,
+            "automargin": True,
+        },
+        "margin": {"t": 100, "l": 80, "r": 80},
+    }
+
+    # Give each line its own overlaid y-axis so traces with different magnitudes
+    # remain readable while sharing the same time axis.
+    if num_vars > 1:
+        left_extra = sum(1 for i in range(1, num_vars) if i % 2 == 0)
+        right_extra = sum(1 for i in range(1, num_vars) if i % 2 == 1)
+        left_margin = 80 + 45 * left_extra
+        right_margin = 80 + 45 * right_extra
+        x_start = 0.08 + 0.06 * left_extra
+        x_end = 0.92 - 0.06 * right_extra
+        if x_end - x_start < 0.5:
+            x_start, x_end = 0.25, 0.75
+
+        left_axis_idx = 0
+        right_axis_idx = 0
+        for i in range(1, num_vars):
+            axis_key = f"yaxis{i + 1}"
+            is_right = (i % 2) == 1
+            if is_right:
+                right_axis_idx += 1
+                axis_position = min(0.99, x_end + 0.05 * right_axis_idx)
+            else:
+                left_axis_idx += 1
+                axis_position = max(0.01, x_start - 0.05 * left_axis_idx)
+
+            layout_update[axis_key] = {
+                "overlaying": "y",
+                "side": "right" if is_right else "left",
+                "anchor": "free",
+                "position": axis_position,
+                "showgrid": False,
+                "showline": True,
+                "linecolor": plot_colors[i % len(plot_colors)],
+                "tickfont": {"color": plot_colors[i % len(plot_colors)]},
+                "zeroline": False,
+                "nticks": 5,
+                "automargin": True,
+            }
+
+        state_plot.update_layout(
+            xaxis={
+                "domain": [x_start, x_end],
+                "title": "Time (s)",
+            },
+            margin={"t": 100, "l": left_margin, "r": right_margin},
+        )
+
+    state_plot.update_layout(**layout_update)
     return state_plot
 
 
