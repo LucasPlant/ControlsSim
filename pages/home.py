@@ -8,6 +8,11 @@ cards = [
         "route": "/control-simulation",
         "is_live": True,
     },
+    {
+        "title": "SE2 Kalman Filter",
+        "route": "/kf-simulation",
+        "is_live": True,
+    },
 ]
 
 layout = html.Main(
@@ -30,7 +35,7 @@ layout = html.Main(
                         html.H2(card["title"], className="card-title"),
                         (
                             dcc.Link(
-                                html.Button("Control Simulation", className="primary-btn menu-btn"),
+                                html.Button(card["title"], className="primary-btn menu-btn"),
                                 href=card["route"],
                                 className="menu-link",
                             )

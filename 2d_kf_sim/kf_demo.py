@@ -34,7 +34,7 @@ from sim import (
     RandomWalk,
     RigidBodyTrajectory,
 )
-from plot_utils import (
+from kf_plot_utils import (
     plot_trajectory,
     animate_trajectory,
     plot_imu_measurements,
@@ -187,7 +187,7 @@ def run_demo(name: str, cfg: dict, save_html: bool) -> None:
         dt          = DT,
         Sigma_imu   = NOISE_CFG.imu_cov,
         Sigma_pos   = NOISE_CFG.pos_cov,
-        sigma_theta = np.sqrt(NOISE_CFG.heading_var),
+        heading_var = NOISE_CFG.heading_var,
     )
     s_hist, P_hist = ekf.run(z_seq, u_seq)
 

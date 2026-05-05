@@ -5,6 +5,12 @@ State : s = [x, y, theta, vx_W, vy_W]
 Input : u = [a_xB, a_yB, omega]                (IMU)
 Meas  : z = [x, y, theta]                       (GPS + heading)
 
+All noise parameters are consistently in variance / covariance units:
+  Sigma_imu   — (3, 3) IMU measurement covariance
+  Sigma_pos   — (2, 2) GPS position measurement covariance
+  heading_var — scalar heading measurement variance [rad²]
+  sigma0      — (exception) initial velocity std dev [m/s], gets squared internally
+
 All filter quantities carry a leading batch axis of size n so a full
 Monte Carlo sweep runs in a single `run()` call.
 """
@@ -34,20 +40,20 @@ class EKF:
     def __init__(
         self,
         z0:          np.ndarray,    # (n, 3)  first measurement per trial [x, y, theta]
-        sigma0:      float,          # large std dev for unobserved velocity states
+        sigma0:      float,          # initial velocity std dev [m/s] — gets squared internally
         dt:          float,
         Sigma_imu:   np.ndarray,    # (3, 3) IMU noise covariance
-        Sigma_pos:   np.ndarray,    # (2, 2) GPS noise covariance
-        sigma_theta: float,          # heading-measurement std dev [rad]
+        Sigma_pos:   np.ndarray,    # (2, 2) GPS position noise covariance
+        heading_var: float,          # heading-measurement variance [rad²]
     ):
         z0 = np.atleast_2d(np.asarray(z0, float))
         n  = z0.shape[0]
 
-        self.n         = n
-        self.dt        = dt
-        self.Sigma_imu = np.asarray(Sigma_imu, float)
-        self.Sigma_pos = np.asarray(Sigma_pos, float)
-        self.sigma_theta = float(sigma_theta)
+        self.n           = n
+        self.dt          = dt
+        self.Sigma_imu   = np.asarray(Sigma_imu, float)
+        self.Sigma_pos   = np.asarray(Sigma_pos, float)
+        self.heading_var = float(heading_var)
 
         # Initial posterior state: position and heading from first measurement, velocities = 0
         self.s_hat = np.zeros((n, 5))
@@ -57,7 +63,7 @@ class EKF:
         # Initial posterior covariance: known position+heading, large variance on velocity
         P0 = np.zeros((5, 5))
         P0[0:2, 0:2] = self.Sigma_pos
-        P0[2, 2]     = self.sigma_theta ** 2
+        P0[2, 2]     = self.heading_var
         P0[3, 3]     = sigma0 ** 2
         P0[4, 4]     = sigma0 ** 2
         self.P = np.broadcast_to(P0, (n, 5, 5)).copy()
@@ -74,7 +80,7 @@ class EKF:
 
         self.R = np.zeros((3, 3))
         self.R[0:2, 0:2] = self.Sigma_pos
-        self.R[2, 2]     = self.sigma_theta ** 2
+        self.R[2, 2]     = self.heading_var
 
     # ------------------------------------------------------------------
     # Internal helpers — build per-trial Jacobians

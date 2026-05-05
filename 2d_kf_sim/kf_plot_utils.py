@@ -32,34 +32,34 @@ from sim import RigidBodyTrajectory, SE2
 # Colour palette
 # ---------------------------------------------------------------------------
 
-_BG       = "#0d1117"
-_GRID     = "#21262d"
-_ACCENT   = "#58a6ff"
-_WARM     = "#f78166"
-_GREEN    = "#3fb950"
-_PURPLE   = "#bc8cff"
-_ORANGE   = "#e3b341"
-_FG       = "#c9d1d9"
+_BG     = "#ffffff"
+_GRID   = "#e2e8f0"
+_ACCENT = "#2563eb"
+_WARM   = "#dc2626"
+_GREEN  = "#16a34a"
+_PURPLE = "#7c3aed"
+_ORANGE = "#d97706"
+_FG     = "#11243b"
 
 _MC_COLOURS = [
-    "#58a6ff", "#3fb950", "#f78166", "#bc8cff",
-    "#e3b341", "#79c0ff", "#56d364", "#ffa198",
+    "#2563eb", "#16a34a", "#dc2626", "#7c3aed",
+    "#d97706", "#0891b2", "#db2777", "#65a30d",
 ]
 
 _AXIS_LAYOUT = dict(
     paper_bgcolor=_BG,
     plot_bgcolor=_BG,
-    font=dict(color=_FG, family="monospace"),
+    font=dict(color=_FG, family="Manrope, sans-serif"),
     xaxis=dict(gridcolor=_GRID, zerolinecolor=_GRID, color=_FG),
-    legend=dict(bgcolor="#161b22", bordercolor=_GRID, borderwidth=1),
+    legend=dict(bgcolor="#f8fbff", bordercolor="#d3deea", borderwidth=1),
 )
 
 # Like _AXIS_LAYOUT but without the xaxis key — safe to use alongside explicit xaxis=
 _LAYOUT_BASE = dict(
     paper_bgcolor=_BG,
     plot_bgcolor=_BG,
-    font=dict(color=_FG, family="monospace"),
-    legend=dict(bgcolor="#161b22", bordercolor=_GRID, borderwidth=1),
+    font=dict(color=_FG, family="Manrope, sans-serif"),
+    legend=dict(bgcolor="#f8fbff", bordercolor="#d3deea", borderwidth=1),
 )
 
 _YAXIS_BASE  = dict(gridcolor=_GRID, zerolinecolor=_GRID, color=_FG)
@@ -359,7 +359,7 @@ def plot_mc_paths(
     fig.add_trace(go.Scatter(
         x=mean_xs, y=mean_ys,
         mode="lines",
-        line=dict(color="white", width=2.5, dash="dash"),
+        line=dict(color=_FG, width=2.5, dash="dash"),
         name="mean path",
     ))
 
@@ -494,8 +494,8 @@ def plot_imu_measurements(
         title=dict(text=title, font=dict(size=18, color=_FG)),
         paper_bgcolor=_BG,
         plot_bgcolor=_BG,
-        font=dict(color=_FG, family="monospace"),
-        legend=dict(bgcolor="#161b22", bordercolor=_GRID, borderwidth=1),
+        font=dict(color=_FG, family="Manrope, sans-serif"),
+        legend=dict(bgcolor="#f8fbff", bordercolor="#d3deea", borderwidth=1),
     )
     return fig
 
@@ -925,8 +925,8 @@ def plot_ekf_states(
         title=dict(text=title, font=dict(size=18, color=_FG)),
         paper_bgcolor=_BG,
         plot_bgcolor=_BG,
-        font=dict(color=_FG, family="monospace"),
-        legend=dict(bgcolor="#161b22", bordercolor=_GRID, borderwidth=1),
+        font=dict(color=_FG, family="Manrope, sans-serif"),
+        legend=dict(bgcolor="#f8fbff", bordercolor="#d3deea", borderwidth=1),
         height=900,
     )
     return fig
@@ -966,12 +966,13 @@ def plot_mc_mse(
     gt_vx    = traj.velocity_W[:, :, 0]                                         # (n, nt)
     gt_vy    = traj.velocity_W[:, :, 1]
 
+    theta_err = (s_hist[:, :, 2] - gt_theta + np.pi) % (2 * np.pi) - np.pi
     sq_err = (
-        (s_hist[:, :, 0] - gt_x)     ** 2
-      + (s_hist[:, :, 1] - gt_y)     ** 2
-      + (s_hist[:, :, 2] - gt_theta) ** 2
-      + (s_hist[:, :, 3] - gt_vx)    ** 2
-      + (s_hist[:, :, 4] - gt_vy)    ** 2
+        (s_hist[:, :, 0] - gt_x)  ** 2
+      + (s_hist[:, :, 1] - gt_y)  ** 2
+      + theta_err                  ** 2
+      + (s_hist[:, :, 3] - gt_vx) ** 2
+      + (s_hist[:, :, 4] - gt_vy) ** 2
     )  # (n, nt)
 
     mc_var = sq_err.var(axis=0)  # (nt,)
@@ -1005,7 +1006,7 @@ def plot_mc_mse(
     fig.add_trace(go.Scatter(
         x=times, y=mc_var,
         mode="lines",
-        line=dict(color="#ffffff", width=2.5),
+        line=dict(color=_FG, width=2.5),
         name="MC var(sq. error)",
     ))
 
