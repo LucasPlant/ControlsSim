@@ -3,6 +3,10 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "2d_kf_sim"))
 
+_KF_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "2d_kf_sim")
+_EKF_MATH_MD = open(os.path.join(_KF_DIR, "kalman_filter_math.md")).read()
+# _SIM_README_MD = open(os.path.join(_KF_DIR, "sim_planning.md")).read()
+
 import numpy as np
 import dash
 from dash import Input, Output, State, callback, dcc, html, register_page
@@ -30,7 +34,7 @@ register_page(__name__, path="/kf-simulation", name="SE2 Kalman Filter")
 
 # General simulation parameters
 DEFAULT_DT       = 0.02
-DEFAULT_T_FINAL  = 20.0
+DEFAULT_T_FINAL  = 10.0
 DEFAULT_N_TRIALS = 10
 DEFAULT_MASS     = 1.0
 DEFAULT_INERTIA  = 0.5
@@ -62,6 +66,24 @@ MIN_THETA, MAX_THETA = -180.0, 180.0
 MIN_VEL,   MAX_VEL   = -50.0,  50.0
 MIN_OMEGA, MAX_OMEGA = -20.0,  20.0
 
+# Step sizes for numeric inputs
+STEP_DT            = 0.001
+STEP_T_FINAL       = 1.0
+STEP_N_TRIALS      = 1
+STEP_MASS          = 0.01
+STEP_INERTIA       = 0.01
+STEP_SIGMA0        = 0.1
+STEP_IMU_ACCEL_STD = 0.01
+STEP_IMU_GYRO_STD  = 0.01
+STEP_POS_STD       = 0.01
+STEP_HEADING_STD   = 0.01
+STEP_POS           = 0.1
+STEP_THETA         = 1.0
+STEP_VEL           = 0.1
+STEP_OMEGA         = 0.1
+STEP_FREQ          = 0.01
+STEP_GAIN          = 0.5
+
 
 # ---------------------------------------------------------------------------
 # Registries
@@ -84,22 +106,22 @@ SIM_CLASSES = {
 # (name, label, default, min, max, step)
 SIM_SPECIFIC_FIELDS = {
     "circle_tangent": [
-        ("radius", "Radius (m)",  5.0, 0.1,  50.0, 0.1),
-        ("speed",  "Speed (m/s)", 2.0, 0.1,  20.0, 0.1),
+        ("radius", "Radius (m)",  5.0, 0.1,  50.0, STEP_POS),
+        ("speed",  "Speed (m/s)", 2.0, 0.1,  20.0, STEP_VEL),
     ],
     "circle_center": [
-        ("radius", "Radius (m)",  5.0, 0.1,  50.0, 0.1),
-        ("speed",  "Speed (m/s)", 2.0, 0.1,  20.0, 0.1),
+        ("radius", "Radius (m)",  5.0, 0.1,  50.0, STEP_POS),
+        ("speed",  "Speed (m/s)", 2.0, 0.1,  20.0, STEP_VEL),
     ],
     "sinusoid": [
-        ("speed",    "Speed (m/s)",          2.0,  0.1,  20.0, 0.1),
-        ("lat_amp",  "Lat Amplitude (m/s)",  1.0,  0.0,  10.0, 0.1),
-        ("lat_freq", "Lat Frequency (Hz)",   0.3,  0.01,  5.0, 0.01),
-        ("kv",       "Velocity Gain",        8.0,  0.1,  50.0, 0.5),
+        ("speed",    "Speed (m/s)",          2.0,  0.1,  20.0, STEP_VEL),
+        ("lat_amp",  "Lat Amplitude (m/s)",  1.0,  0.0,  10.0, STEP_VEL),
+        ("lat_freq", "Lat Frequency (Hz)",   0.3,  0.01,  5.0, STEP_FREQ),
+        ("kv",       "Velocity Gain",        8.0,  0.1,  50.0, STEP_GAIN),
     ],
     "random_walk": [
-        ("force_std",  "Force Std (N)",    1.5, 0.0, 20.0, 0.1),
-        ("torque_std", "Torque Std (N·m)", 1.0, 0.0, 20.0, 0.1),
+        ("force_std",  "Force Std (N)",    1.5, 0.0, 20.0, STEP_VEL),
+        ("torque_std", "Torque Std (N·m)", 1.0, 0.0, 20.0, STEP_VEL),
     ],
 }
 
@@ -167,32 +189,32 @@ layout = html.Main(
         ),
         html.Div(
             [
-                # ---- LEFT COLUMN: inputs ----
+                # ---- LEFT COLUMN: inputs -----
                 html.Div(
                     [
                         html.H2("Select a Simulation", className="section-title"),
                         dcc.Dropdown(
                             id="kf-sim-type",
                             options=[{"label": v, "value": k} for k, v in SIM_OPTIONS.items()],
-                            value="circle_tangent",
+                            value="sinusoid",
                             clearable=False,
                             className="dropdown",
                         ),
                         _details(
                             "Simulation Inputs",
                             [html.Div(id="kf-sim-specific-inputs")],
-                            open_=True,
+                            open_=False,
                         ),
                         _details(
                             "General Parameters",
                             [
                                 html.Div([
-                                    _labeled_input("DT (s)",       "kf-dt",       DEFAULT_DT,       MIN_DT,       MAX_DT,       0.001),
-                                    _labeled_input("T Final (s)",  "kf-t-final",  DEFAULT_T_FINAL,  MIN_T_FINAL,  MAX_T_FINAL,  1.0),
-                                    _labeled_input("N Trials",     "kf-n-trials", DEFAULT_N_TRIALS, MIN_N_TRIALS, MAX_N_TRIALS, 1),
-                                    _labeled_input("Mass (kg)",    "kf-mass",     DEFAULT_MASS,     MIN_MASS,     MAX_MASS,     0.01),
-                                    _labeled_input("Inertia",      "kf-inertia",  DEFAULT_INERTIA,  MIN_INERTIA,  MAX_INERTIA,  0.01),
-                                    _labeled_input("Sigma0 (m/s)", "kf-sigma0",   DEFAULT_SIGMA0,   MIN_SIGMA0,   MAX_SIGMA0,   0.1),
+                                    _labeled_input("DT (s)",       "kf-dt",       DEFAULT_DT,       MIN_DT,       MAX_DT,       STEP_DT),
+                                    _labeled_input("T Final (s)",  "kf-t-final",  DEFAULT_T_FINAL,  MIN_T_FINAL,  MAX_T_FINAL,  STEP_T_FINAL),
+                                    _labeled_input("N Trials",     "kf-n-trials", DEFAULT_N_TRIALS, MIN_N_TRIALS, MAX_N_TRIALS, STEP_N_TRIALS),
+                                    _labeled_input("Mass (kg)",    "kf-mass",     DEFAULT_MASS,     MIN_MASS,     MAX_MASS,     STEP_MASS),
+                                    _labeled_input("Inertia",      "kf-inertia",  DEFAULT_INERTIA,  MIN_INERTIA,  MAX_INERTIA,  STEP_INERTIA),
+                                    _labeled_input("Sigma0 (m/s)", "kf-sigma0",   DEFAULT_SIGMA0,   MIN_SIGMA0,   MAX_SIGMA0,   STEP_SIGMA0),
                                 ]),
                             ],
                         ),
@@ -204,12 +226,12 @@ layout = html.Main(
                             "Noise Configuration",
                             [
                                 html.Div([
-                                    _labeled_input("IMU Accel Std X (m/s²)", "kf-imu-ax-std", DEFAULT_IMU_ACCEL_STD_X, MIN_IMU_ACCEL_STD, MAX_IMU_ACCEL_STD, 0.01),
-                                    _labeled_input("IMU Accel Std Y (m/s²)", "kf-imu-ay-std", DEFAULT_IMU_ACCEL_STD_Y, MIN_IMU_ACCEL_STD, MAX_IMU_ACCEL_STD, 0.01),
-                                    _labeled_input("IMU Gyro Std (rad/s)",   "kf-gyro-std",   DEFAULT_IMU_GYRO_STD,    MIN_IMU_GYRO_STD,  MAX_IMU_GYRO_STD,  0.01),
-                                    _labeled_input("Pos Std X (m)",          "kf-pos-sx",     DEFAULT_POS_STD_X,       MIN_POS_STD,       MAX_POS_STD,       0.01),
-                                    _labeled_input("Pos Std Y (m)",          "kf-pos-sy",     DEFAULT_POS_STD_Y,       MIN_POS_STD,       MAX_POS_STD,       0.01),
-                                    _labeled_input("Heading Std (rad)",      "kf-hdg-std",    DEFAULT_HEADING_STD,     MIN_HEADING_STD,   MAX_HEADING_STD,   0.01),
+                                    _labeled_input("IMU Accel Std X (m/s²)", "kf-imu-ax-std", DEFAULT_IMU_ACCEL_STD_X, MIN_IMU_ACCEL_STD, MAX_IMU_ACCEL_STD, STEP_IMU_ACCEL_STD),
+                                    _labeled_input("IMU Accel Std Y (m/s²)", "kf-imu-ay-std", DEFAULT_IMU_ACCEL_STD_Y, MIN_IMU_ACCEL_STD, MAX_IMU_ACCEL_STD, STEP_IMU_ACCEL_STD),
+                                    _labeled_input("IMU Gyro Std (rad/s)",   "kf-gyro-std",   DEFAULT_IMU_GYRO_STD,    MIN_IMU_GYRO_STD,  MAX_IMU_GYRO_STD,  STEP_IMU_GYRO_STD),
+                                    _labeled_input("Pos Std X (m)",          "kf-pos-sx",     DEFAULT_POS_STD_X,       MIN_POS_STD,       MAX_POS_STD,       STEP_POS_STD),
+                                    _labeled_input("Pos Std Y (m)",          "kf-pos-sy",     DEFAULT_POS_STD_Y,       MIN_POS_STD,       MAX_POS_STD,       STEP_POS_STD),
+                                    _labeled_input("Heading Std (rad)",      "kf-hdg-std",    DEFAULT_HEADING_STD,     MIN_HEADING_STD,   MAX_HEADING_STD,   STEP_HEADING_STD),
                                 ]),
                             ],
                         ),
@@ -234,6 +256,13 @@ layout = html.Main(
                 ),
             ],
             className="sim-split",
+        ),
+        html.Div(
+            [
+                dcc.Markdown(_EKF_MATH_MD, mathjax=True, className="math-doc"),
+                # dcc.Markdown(_SIM_README_MD, mathjax=True, className="math-doc"),
+            ],
+            className="math-doc-section",
         ),
     ],
     className="simulation-page",
@@ -266,12 +295,12 @@ def render_sim_inputs(sim_type):
 def render_init_state(sim_type):
     x0, y0, th0, vx0, vy0, om0 = DEFAULT_INIT[sim_type]
     return [
-        _labeled_input("x0 (m)",         "kf-x0",     x0,  MIN_POS,   MAX_POS,   0.1),
-        _labeled_input("y0 (m)",         "kf-y0",     y0,  MIN_POS,   MAX_POS,   0.1),
-        _labeled_input("theta0 (deg)",   "kf-theta0", th0, MIN_THETA, MAX_THETA, 1.0),
-        _labeled_input("vx0 (m/s)",      "kf-vx0",    vx0, MIN_VEL,   MAX_VEL,   0.1),
-        _labeled_input("vy0 (m/s)",      "kf-vy0",    vy0, MIN_VEL,   MAX_VEL,   0.1),
-        _labeled_input("omega0 (rad/s)", "kf-omega0", om0, MIN_OMEGA, MAX_OMEGA, 0.1),
+        _labeled_input("x0 (m)",         "kf-x0",     x0,  MIN_POS,   MAX_POS,   STEP_POS),
+        _labeled_input("y0 (m)",         "kf-y0",     y0,  MIN_POS,   MAX_POS,   STEP_POS),
+        _labeled_input("theta0 (deg)",   "kf-theta0", th0, MIN_THETA, MAX_THETA, STEP_THETA),
+        _labeled_input("vx0 (m/s)",      "kf-vx0",    vx0, MIN_VEL,   MAX_VEL,   STEP_VEL),
+        _labeled_input("vy0 (m/s)",      "kf-vy0",    vy0, MIN_VEL,   MAX_VEL,   STEP_VEL),
+        _labeled_input("omega0 (rad/s)", "kf-omega0", om0, MIN_OMEGA, MAX_OMEGA, STEP_OMEGA),
     ]
 
 
