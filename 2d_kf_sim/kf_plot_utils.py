@@ -975,7 +975,7 @@ def plot_mc_mse(
       + (s_hist[:, :, 4] - gt_vy) ** 2
     )  # (n, nt)
 
-    mc_var = sq_err.var(axis=0)  # (nt,)
+    mc_var = sq_err.mean(axis=0)  # (nt,)
 
     fig = go.Figure()
 
